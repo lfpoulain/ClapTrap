@@ -1,0 +1,5 @@
+claptrap/*
+__pycache__/*
+# Ignorer les fichiers de test volumineux
+*_settings.json
+!settings.json

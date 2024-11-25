@@ -1,0 +1,251 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+    color: #333;
+    background: linear-gradient(to bottom, #e0f7fa, #fff);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+header, footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.8);
+    padding: 20px;
+    backdrop-filter: blur(10px);
+}
+
+header img {
+    height: 200px;
+    margin-right: 20px;
+}
+
+h1 {
+    font-size: 60px;
+    font-weight: 600;
+}
+
+.content-container {
+    display: flex;
+    margin: 20px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+aside {
+    width: 250px;
+    padding: 20px;
+    background: #fff;
+}
+
+.accordion {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.accordion-item {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.accordion-body {
+    padding: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+input, select {
+    width: calc(100% - 20px); /* Ajustement de la largeur pour prendre en compte le padding */
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+    box-sizing: border-box; /* Inclut le padding et la bordure dans la largeur */
+}
+
+input[type="range"] {
+    margin: 10px 0;
+}
+
+button {
+    display: inline-flex;
+    align-items: center;
+    padding: 12px 18px; /* Increased padding for better visibility */
+    background: #007bff; /* High contrast color */
+    color: #fff;
+    font-family: inherit;
+    font-size: 16px; /* Increased font size for clarity */
+    font-weight: 600;
+    border: none;
+    border-radius: 4px;
+    transition: background-color 0.3s, transform 0.2s; /* Adjusted for visual feedback */
+    cursor: pointer;
+}
+
+button:hover {
+    background: #0056b3; /* Color change on hover */
+    transform: translateY(-2px); /* Visual feedback on hover */
+}
+
+button:active {
+    transform: scale(0.95); /* Visual feedback on click */
+}
+
+button.icon {
+    justify-content: center;
+    width: 35px;
+    height: 35px;
+    padding: 0;
+}
+
+main {
+    flex: 1;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#detection_display {
+    width: 150px;
+    height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border-radius: 50%;
+    font-size: 80px;
+    margin-bottom: 30px;
+    box-shadow: inset 0 0 20px #eee;
+    transition: 0.3s;
+}
+
+#detection_display.clap {
+    background: #ccff90;
+    box-shadow: inset 0 0 20px #b2ff59;
+    animation: bounce 0.5s;
+}
+
+@keyframes bounce {
+    50% { transform: scale(1.2); }
+}
+
+footer {
+    margin-top: auto;
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+#detected_labels {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin: 20px;
+    width: 300px;
+}
+
+#detected_labels p {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin: 5px 0;
+}
+
+.audio-source-container {
+    position: relative;
+    width: 100%;
+}
+
+.audio-source-wrapper {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.audio-source-wrapper select {
+    flex: 1;
+}
+
+.refresh-button {
+    padding: 8px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #007bff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.refresh-button:hover {
+    background: #0056b3;
+}
+
+.refresh-button svg {
+    width: 20px;
+    height: 20px;
+    fill: white;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.refresh-button.refreshing svg {
+    animation: spin 1s linear infinite;
+}
+
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    border-radius: 4px;
+    z-index: 1000;
+    animation: slideIn 0.5s ease-out;
+    max-width: 400px;
+}
+
+.notification.success {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.notification.error {
+    background-color: #f44336;
+    color: white;
+}
+
+.notification.warning {
+    background-color: #ff9800;
+    color: white;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}

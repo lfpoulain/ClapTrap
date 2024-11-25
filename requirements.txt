@@ -1,0 +1,17 @@
+sounddevice
+scipy
+numpy
+librosa
+pydub
+torch
+torchaudio
+torchvision
+requests
+flask
+flask-socketio
+matplotlib
+gunicorn
+ffmpeg-python
+mediapipe
+pyaudio
+pyVBAN

@@ -1,0 +1,14 @@
+{
+  "audio_streams": [
+    {
+      "name": "Microphone [RSTP]",
+      "url": "rtsp://localhost:8554/mic",
+      "webhook_url": "http://example.com/webhook/microphone"
+    },
+    {
+      "name": "Live Stream [RTSP]",
+      "url": "rtsp://localhost:8554/live",
+      "webhook_url": "http://example.com/webhook/live"
+    }
+  ]
+}
