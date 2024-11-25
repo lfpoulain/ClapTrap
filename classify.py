@@ -16,27 +16,46 @@ import pyaudio
 import collections
 import cv2
 from vban_receptor import VBANDetector
+from events import send_clap_event, send_labels
+import threading
 
 warnings.filterwarnings("ignore", category=UserWarning, module="google.protobuf.symbol_database")
 logging.basicConfig(level=logging.INFO)
 
+# Variables globales
 detection_running = False
 classifier = None
 record = None
 model = "yamnet.tflite"
-output_file = "recorded_audio.wav"  # Nom du fichier WAV
+output_file = "recorded_audio.wav"
+current_audio_source = None  # Nouvelle variable globale
 
-# Charger les paramètres de configuration
-with open("settings.json") as f:
-    settings = json.load(f)
-audio_source = settings.get("audio_source")
-rtsp_url = settings.get("rtsp_url")
-
-if audio_source is None:
-    raise ValueError("La clé 'audio_source' n'est pas définie dans settings.json")
-
-if audio_source.startswith("rtsp") and rtsp_url is None:
-    raise ValueError("La clé 'rtsp_url' n'est pas définie dans settings.json alors que 'audio_source' est une URL RTSP")
+# Charger les paramètres depuis settings.json
+try:
+    with open('settings.json', 'r') as f:
+        settings = json.load(f)
+        
+    # Récupérer la source audio depuis la section microphone
+    if 'microphone' in settings:
+        AUDIO_SOURCE = settings['microphone'].get('audio_source')
+    else:
+        AUDIO_SOURCE = None
+        
+    if not AUDIO_SOURCE:
+        raise ValueError("La clé 'audio_source' n'est pas définie correctement dans settings.json")
+        
+    # Récupérer les paramètres globaux
+    THRESHOLD = float(settings['global'].get('threshold', 0.5))
+    DELAY = float(settings['global'].get('delay', 2))
+    CHUNK_DURATION = float(settings['global'].get('chunk_duration', 0.5))
+    BUFFER_DURATION = float(settings['global'].get('buffer_duration', 1.0))
+    
+except FileNotFoundError:
+    raise FileNotFoundError("Le fichier settings.json n'existe pas")
+except json.JSONDecodeError:
+    raise ValueError("Le fichier settings.json est mal formaté")
+except KeyError as e:
+    raise ValueError(f"La clé {e} est manquante dans settings.json")
 
 # Charger les flux RTSP et leurs webhooks associés
 with open("flux.json") as f:
@@ -103,13 +122,14 @@ def start_detection(
     audio_source: str,
     rtsp_url: str = None,
 ):
-    global detection_running, classifier, record, output_file
+    global detection_running, classifier, record, current_audio_source
     logging.info("Démarrage de la détection avec sensibilité : %s", score_threshold)
     try:
         if detection_running:
-            return
+            return True  # Si déjà en cours, considérer comme un succès
 
         detection_running = True
+        current_audio_source = audio_source
 
         if (overlapping_factor <= 0) or (overlapping_factor >= 1.0):
             raise ValueError("Overlapping factor must be between 0 and 1.")
@@ -117,6 +137,31 @@ def start_detection(
         if (score_threshold < 0) or (score_threshold > 1.0):
             raise ValueError("Score threshold must be between (inclusive) 0 et 1.")
 
+        # Démarrer la détection dans un thread séparé
+        detection_thread = threading.Thread(target=run_detection, args=(
+            model,
+            max_results,
+            score_threshold,
+            overlapping_factor,
+            socketio,
+            webhook_url,
+            delay,
+            audio_source,
+            rtsp_url
+        ))
+        detection_thread.daemon = True
+        detection_thread.start()
+        
+        return True
+        
+    except Exception as e:
+        logging.error(f"Erreur pendant le démarrage de la détection: {e}")
+        detection_running = False
+        return False
+
+def run_detection(model, max_results, score_threshold, overlapping_factor, socketio, webhook_url, delay, audio_source, rtsp_url):
+    """Fonction qui exécute la détection dans un thread séparé"""
+    try:
         classification_result_list = []
 
         def save_result(result: audio.AudioClassifierResult, timestamp_ms: int):
@@ -246,26 +291,37 @@ def start_detection(
         stop_detection()
 
     except Exception as e:
-        logging.error(f"Erreur pendant la détection: {e}")
+        logging.error(f"Erreur dans le thread de détection: {e}")
         stop_detection()
 
 def stop_detection():
-    global detection_running, classifier, record
+    global detection_running, classifier, record, current_audio_source
     
-    if not detection_running:
-        return
+    try:
+        if not detection_running:
+            return True  # Si déjà arrêté, considérer comme un succès
+            
+        detection_running = False
         
-    detection_running = False
-    
-    if record:
-        record.stop()
-        
-    if classifier:
-        classifier.close()
+        if record:
+            record.stop()
+            record = None
+            
+        if classifier:
+            classifier.close()
+            classifier = None
 
-    if audio_source.startswith("vban://"):
-        detector = VBANDetector.get_instance()
-        detector.stop_listening()
+        if current_audio_source and current_audio_source.startswith("vban://"):
+            detector = VBANDetector.get_instance()
+            detector.stop_listening()
+
+        current_audio_source = None  # Réinitialisation de la source audio
+        
+        return True  # Retourner True si tout s'est bien passé
+        
+    except Exception as e:
+        logging.error(f"Erreur lors de l'arrêt de la détection: {e}")
+        return False  # Retourner False en cas d'erreur
 
 def is_running():
     return detection_running

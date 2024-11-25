@@ -36,12 +36,28 @@ python app.py
 
 ## Configuration
 
-### Paramètres principaux (settings.json)
-- `threshold` : Seuil de détection (entre 0 et 1)
-- `delay` : Délai minimum entre deux détections (en secondes)
-- `webhook_url` : URL du webhook pour les notifications
-- `audio_source` : Source audio (microphone ou URL RTSP)
-- `rtsp_url` : URL du flux RTSP (si utilisé)
+### Paramètres principaux
+Les paramètres sont maintenant automatiquement sauvegardés lors du démarrage de la détection. Le système inclut :
+
+- Validation des paramètres avant le démarrage :
+  - `threshold` : Seuil de détection (entre 0 et 1)
+  - `delay` : Délai minimum positif entre deux détections (en secondes)
+  - `webhook_url` : URL valide commençant par http:// ou https://
+  - `audio_source` : Source audio sélectionnée
+
+- Gestion robuste des erreurs :
+  - Vérification des permissions d'écriture
+  - Sauvegarde sécurisée avec fichier temporaire
+  - Restauration automatique en cas d'erreur
+  - Messages d'erreur explicites
+
+### Mode Développement
+En mode développement (DEBUG=True) :
+- Lien "Exécuter les tests" dans le footer
+- Tests automatisés couvrant :
+  - Validation des paramètres
+  - Opérations sur les fichiers
+  - Préservation des paramètres lors de l'arrêt
 
 ### Sources audio
 1. **Microphone local**
@@ -118,3 +134,31 @@ Le serveur MediaMTX intégré permet de :
 - Configurer des webhooks par flux
 
 Configuration dans `mediamtx/mediamtx.yml`
+
+## Fonctionnalités de sécurité
+
+### Validation des paramètres
+- Vérification automatique avant le démarrage
+- Contrôle des valeurs hors limites
+- Validation des URLs de webhook
+- Test d'accessibilité des webhooks
+
+### Gestion des fichiers
+- Sauvegarde atomique avec fichiers temporaires
+- Gestion des permissions
+- Backup automatique des paramètres
+- Restauration en cas d'erreur
+
+### Tests intégrés
+Les tests automatisés vérifient :
+1. La validation des paramètres
+   - Paramètres requis
+   - Valeurs limites
+   - Format des URLs
+2. Les opérations sur les fichiers
+   - Permissions
+   - Corruption de fichiers
+   - Verrouillage de fichiers
+3. La préservation des paramètres
+   - Sauvegarde correcte
+   - Non-modification lors de l'arrêt

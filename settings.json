@@ -1,11 +1,33 @@
 {
+    "global": {
+        "threshold": "0.5",
+        "delay": "1.0"
+    },
+    "rtsp_sources": [
+        {
+            "name": "Camera 1",
+            "url": "rtsp://example.com/stream1",
+            "webhook_url": "http://example.com/webhook1"
+        },
+        {
+            "name": "Camera 2",
+            "url": "rtsp://example.com/stream2",
+            "webhook_url": null
+        }
+    ],
+    "microphone": {
+        "device_index": "0",
+        "audio_source": "Test Microphone",
+        "webhook_url": "http://test.com/webhook"
+    },
+    "vban": {
+        "stream_name": "Stream1",
+        "ip": "0.0.0.0",
+        "port": 6980,
+        "webhook_url": "http://example.com/webhook-vban"
+    },
+    "audio_source": "microphone",
     "threshold": "0.5",
-    "delay": "2",
-    "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
-    "chunk_duration": 0.5,
-    "buffer_duration": 1.0,
-    "device": "6",
-    "audio_source": "Microphone iMac",
-    "rtsp_url": "rtsp://localhost:8554/mic",
-    "vban_port": 6980
+    "delay": "1.0",
+    "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV"
 }

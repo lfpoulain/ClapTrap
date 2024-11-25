@@ -3,79 +3,151 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Détection d'Applaudissements</title>
+    <title>ClapTrap - Détection d'Applaudissements</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.ico') }}">
 </head>
 
 <body>
     <header>
-        <img src="{{ url_for('static', filename='img/logo.webp') }}" alt="Logo de détection d'applaudissements" id="logo" >
+        <img src="{{ url_for('static', filename='img/logo.webp') }}" alt="Logo ClapTrap" id="logo">
         <h1>ClapTrap</h1>
     </header>
 
-    <!-- Ajout de la zone de notification -->
     <div id="notification" class="notification" style="display: none;"></div>
 
-    <div class="content-container">
-        <aside>
-            <div class="accordion" id="accordionSettings">
-                <div class="accordion-item">
-                    <div id="collapseAudioConfig" class="accordion-collapse collapse show" aria-labelledby="headingAudioConfig" data-bs-parent="#accordionSettings">
-                        <div class="accordion-body">
-                            <div class="form-group audio-source-container">
-                                <label for="audio_source">Source audio</label>
-                                <div class="audio-source-wrapper">
-                                    <select name="audio_source" id="audio_source">
-                                        {% for device in devices %}
-                                        <option value="{{ device['name'] }}" {% if device['name'] == settings.audio_source %}selected{% endif %}>
-                                            {{ device['name'] }}
-                                        </option>
-                                        {% endfor %}
-                                        {% for stream in flux %}
-                                        <option value="{{ stream['url'] }}" {% if stream['url'] == settings.audio_source %}selected{% endif %}>
-                                            {{ stream['name'] }}
-                                        </option>
-                                        {% endfor %}
-                                    </select>
-                                    <button type="button" id="refresh_vban" class="refresh-button" aria-label="Rafraîchir les sources VBAN">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="threshold">Précision (entre 0 et 1)</label>
-                                <input type="text" id="threshold" name="threshold" class="form-control" value="{{ settings.get('threshold', 0.5) }}" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="delay">Délai entre 2 détections (sec.)</label>
-                                <input type="number" id="delay" name="delay" class="form-control" min="0" step="0.1" value="{{ settings.get('delay', 1.0) }}" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="webhook_url">URL du webhook</label>
-                                <input type="url" id="webhook_url" name="webhook_url" class="form-control" value="{{ settings.get('webhook_url', '') }}">
-                            </div>
+    <main class="dashboard">
+        <!-- Panneau de visualisation -->
+        <section class="visualization-panel">
+            <div id="detection_display"></div>
+            <div class="control-panel">
+                <button id="startButton" class="btn btn-primary">Démarrer la détection</button>
+                <button id="stopButton" class="btn btn-danger" style="display: none;">Arrêter la détection</button>
+            </div>
+            <div id="detected_labels"></div>
+        </section>
+
+        <!-- Configuration des sources -->
+        <section class="config-panel">
+            <h2>Configuration</h2>
+            
+            <!-- Sélection de la source -->
+            <div class="config-card">
+                <h3>Source Audio</h3>
+                <div class="source-selector">
+                    <select name="audio_source" id="audio_source" aria-label="Sélection de la source audio">
+                        <optgroup label="Microphones">
+                            {% for device in devices %}
+                            <option value="{{ device['name'] }}" {% if device['name'] == settings.audio_source %}selected{% endif %}>
+                                {{ device['name'] }}
+                            </option>
+                            {% endfor %}
+                        </optgroup>
+                        <optgroup label="Flux RTSP">
+                            {% for stream in flux %}
+                            <option value="{{ stream['url'] }}" {% if stream['url'] == settings.audio_source %}selected{% endif %}>
+                                {{ stream['name'] }}
+                            </option>
+                            {% endfor %}
+                        </optgroup>
+                    </select>
+                    <button type="button" id="refresh_vban" class="refresh-button" aria-label="Rafraîchir les sources VBAN">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Paramètres de détection -->
+            <div class="config-card">
+                <h3>Paramètres de détection</h3>
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <label for="threshold">Précision</label>
+                        <div class="setting-control">
+                            <input type="range" id="threshold" name="threshold" 
+                                   min="0" max="1" step="0.1" 
+                                   value="{{ settings.get('threshold', 0.5) }}">
+                            <output for="threshold">{{ settings.get('threshold', 0.5) }}</output>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label for="delay">Délai entre détections</label>
+                        <div class="setting-control">
+                            <input type="number" id="delay" name="delay" 
+                                   min="0" step="0.1" value="{{ settings.get('delay', 1.0) }}">
+                            <span class="unit">sec</span>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <div class="control-buttons">
-                <button id="startButton" class="btn btn-primary">Démarrer la détection</button>
-                <button id="stopButton" class="btn btn-danger" style="display: none;">Arrêter la détection</button>
+
+            <!-- Configuration des webhooks -->
+            <div class="config-card webhooks">
+                <h3>Webhooks</h3>
+                <div class="webhook-grid">
+                    <!-- Webhook Microphone -->
+                    <div class="webhook-card">
+                        <div class="webhook-header">
+                            <h4>
+                                <span class="webhook-icon">🎤</span>
+                                Microphone
+                            </h4>
+                            <label class="switch" title="Activer/Désactiver le webhook">
+                                <input type="checkbox" id="webhook-mic-enabled" 
+                                       {% if settings.microphone.webhook_url %}checked{% endif %}>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div class="webhook-content" {% if not settings.microphone.webhook_url %}style="display: none;"{% endif %}>
+                            <div class="webhook-input-group">
+                                <input type="url" id="webhook-mic-url" 
+                                       class="webhook-input" 
+                                       value="{{ settings.microphone.webhook_url }}"
+                                       placeholder="https://votre-serveur.com/webhook"
+                                       aria-label="URL du webhook pour le microphone">
+                                <button type="button" class="test-webhook" data-source="microphone">
+                                    <span class="icon">🔔</span>
+                                    Tester
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Webhooks RTSP -->
+                    {% for stream in flux %}
+                    <div class="webhook-card">
+                        <div class="webhook-header">
+                            <h4>
+                                <span class="webhook-icon">📹</span>
+                                {{ stream.name }}
+                            </h4>
+                            <label class="switch" title="Activer/Désactiver le webhook">
+                                <input type="checkbox" id="webhook-rtsp-{{ loop.index }}-enabled" 
+                                       {% if stream.webhook_url %}checked{% endif %}>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div class="webhook-content" {% if not stream.webhook_url %}style="display: none;"{% endif %}>
+                            <div class="webhook-input-group">
+                                <input type="url" id="webhook-rtsp-{{ loop.index }}-url" 
+                                       class="webhook-input" 
+                                       value="{{ stream.webhook_url }}"
+                                       placeholder="https://votre-serveur.com/webhook"
+                                       aria-label="URL du webhook pour {{ stream.name }}">
+                                <button type="button" class="test-webhook" data-source="rtsp-{{ loop.index }}">
+                                    <span class="icon">🔔</span>
+                                    Tester
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-        </aside>
-        
-        <main>
-            <div id="detection_display"></div>
-            <div id="detected_labels"></div>
-        </main>
-    </div>
+        </section>
+    </main>
 
     <footer>
         {% if debug %}
@@ -87,25 +159,6 @@
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-    <script>
-        var socket = io.connect('http://' + document.domain + ':' + 16045);
-        socket.on('clap', function(data) {
-            document.getElementById('detection_display').innerHTML = '👏';
-            setTimeout(function() {
-                document.getElementById('detection_display').innerHTML = '';
-            }, 200);
-        });
-
-        socket.on('labels', function(data) {
-            var labelsDiv = document.getElementById('detected_labels');
-            labelsDiv.innerHTML = '';
-            data.detected.forEach(function(item) {
-                var labelElement = document.createElement('p');
-                labelElement.textContent = item.label;
-                labelsDiv.appendChild(labelElement);
-            });
-        });
-    </script>
 </body>
 </html>
 

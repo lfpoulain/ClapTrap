@@ -1,296 +1,275 @@
-document.getElementById('refresh_vban').addEventListener('click', function() {
-    const button = this;
-    const select = document.getElementById('audio_source');
-    
-    // Ajouter la classe pour l'animation
-    button.classList.add('refreshing');
-    
-    // Sauvegarder la valeur sélectionnée actuelle
-    const currentValue = select.value;
-    
-    fetch('/refresh_vban_sources')
-        .then(response => response.json())
-        .then(data => {
-            // Supprimer les anciennes sources VBAN
-            Array.from(select.options).forEach(option => {
-                if (option.value.startsWith('vban://')) {
-                    option.remove();
-                }
-            });
-            
-            // Ajouter les nouvelles sources VBAN
-            data.sources.forEach(source => {
-                const option = new Option(source.name, source.url);
-                select.add(option);
-            });
-            
-            // Restaurer la sélection si possible
-            if (Array.from(select.options).some(opt => opt.value === currentValue)) {
-                select.value = currentValue;
-            }
-        })
-        .catch(error => {
-            console.error('Erreur lors du rafraîchissement des sources VBAN:', error);
-        })
-        .finally(() => {
-            // Retirer la classe d'animation
-            button.classList.remove('refreshing');
+// Fonction pour exécuter les tests (déplacée en dehors du DOMContentLoaded)
+async function runTests() {
+    try {
+        const response = await fetch('/run_tests', {
+            method: 'POST'
         });
-});
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showNotification('Tests exécutés avec succès', 'success');
+            console.log('Résultats des tests:', data);
+        } else {
+            showNotification(data.error || 'Erreur lors de l\'exécution des tests', 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur lors de l\'exécution des tests', 'error');
+        console.error('Erreur:', error);
+    }
+}
 
-// Fonction pour afficher les notifications
+// Fonction pour afficher les notifications (déplacée en dehors du DOMContentLoaded)
 function showNotification(message, type = 'success') {
     const notification = document.getElementById('notification');
     notification.textContent = message;
     notification.className = `notification ${type}`;
     notification.style.display = 'block';
-
+    
+    // Force le reflow pour déclencher l'animation
+    notification.offsetHeight;
+    
+    // Ajoute la classe show pour déclencher l'animation
+    notification.classList.add('show');
+    
     setTimeout(() => {
-        notification.style.display = 'none';
+        notification.classList.remove('show');
+        // Attendre la fin de l'animation avant de cacher
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 300);
     }, 3000);
 }
 
-// Fonction pour mettre à jour l'état des boutons
-function updateButtonState(isRunning) {
-    console.log('Updating button state:', isRunning);
-    const startButton = document.getElementById('startButton');
-    const stopButton = document.getElementById('stopButton');
-    
-    if (startButton && stopButton) {
-        if (isRunning) {
-            console.log('Setting to running state');
-            startButton.style.display = 'none';
-            stopButton.style.display = 'block';
-        } else {
-            console.log('Setting to stopped state');
-            startButton.style.display = 'block';
-            stopButton.style.display = 'none';
-        }
-        startButton.disabled = false;
-        stopButton.disabled = false;
-    }
-}
-
-// Fonction pour valider les paramètres
-function validateSettings(settings) {
-    // Validation de la source audio
-    if (!settings.audio_source) {
-        showNotification('La source audio est requise', 'error');
-        return false;
-    }
-
-    // Validation du threshold (entre 0 et 1)
-    const threshold = parseFloat(settings.threshold);
-    if (isNaN(threshold) || threshold < 0 || threshold > 1) {
-        showNotification('La précision doit être un nombre entre 0 et 1', 'error');
-        return false;
-    }
-
-    // Validation du délai (positif)
-    const delay = parseFloat(settings.delay);
-    if (isNaN(delay) || delay < 0) {
-        showNotification('Le délai doit être un nombre positif', 'error');
-        return false;
-    }
-
-    // Validation du webhook URL (optionnel)
-    if (settings.webhook_url) {
-        try {
-            new URL(settings.webhook_url);
-            if (!settings.webhook_url.startsWith('http://') && !settings.webhook_url.startsWith('https://')) {
-                showNotification('L\'URL du webhook doit commencer par http:// ou https://', 'error');
-                return false;
-            }
-        } catch (e) {
-            showNotification('L\'URL du webhook n\'est pas valide', 'error');
-            return false;
-        }
-    }
-
-    return true;
-}
-
-// Fonction pour vérifier les paramètres sauvegardés
-async function verifySettings(originalSettings) {
-    try {
-        const response = await fetch('/status');
-        const data = await response.json();
-        
-        if (data.settings) {  // Si le serveur renvoie les paramètres actuels
-            console.log('Vérification des paramètres:');
-            console.log('Paramètres originaux:', originalSettings);
-            console.log('Paramètres sauvegardés:', data.settings);
-            
-            // Vérifier chaque paramètre
-            const fields = ['audio_source', 'threshold', 'delay', 'webhook_url'];
-            for (const field of fields) {
-                if (originalSettings[field] !== data.settings[field]) {
-                    console.error(`Différence détectée pour ${field}:`, {
-                        original: originalSettings[field],
-                        saved: data.settings[field]
-                    });
-                }
-            }
-        }
-    } catch (error) {
-        console.error('Erreur lors de la vérification des paramètres:', error);
-    }
-}
-
-// Fonction pour démarrer la détection avec gestion d'erreurs améliorée
-async function startDetection(event) {
-    if (event) event.preventDefault();
-    console.log('Starting detection...');
-    
-    const settings = {
-        audio_source: document.getElementById('audio_source').value,
-        threshold: document.getElementById('threshold').value,
-        delay: document.getElementById('delay').value,
-        webhook_url: document.getElementById('webhook_url').value
-    };
-
-    console.log('Paramètres à sauvegarder:', settings);
-
-    // Valider les paramètres avant de continuer
-    if (!validateSettings(settings)) {
-        return;
-    }
-
-    // Sauvegarder l'état des boutons pour pouvoir les restaurer en cas d'erreur
-    const startButton = document.getElementById('startButton');
-    const stopButton = document.getElementById('stopButton');
-    const originalStartDisplay = startButton.style.display;
-    const originalStopDisplay = stopButton.style.display;
-
-    try {
-        // Désactiver les boutons pendant le traitement
-        startButton.disabled = true;
-        stopButton.disabled = true;
-
-        // Mettre à jour l'interface immédiatement
-        updateButtonState(true);
-        showNotification('Démarrage de la détection...');
-        
-        const response = await fetch('/start_detection', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(settings)
-        });
-
-        const data = await response.json();
-        console.log('Start detection response:', data);
-        
-        if (response.ok) {
-            showNotification('Détection démarrée avec succès');
-            // Vérifier que les paramètres ont été correctement sauvegardés
-            await verifySettings(settings);
-        } else {
-            // En cas d'erreur, restaurer l'état précédent
-            startButton.style.display = originalStartDisplay;
-            stopButton.style.display = originalStopDisplay;
-            showNotification(data.message || 'Erreur lors du démarrage de la détection', 'error');
-            console.error('Erreur serveur:', data.message);
-        }
-    } catch (error) {
-        console.error('Erreur:', error);
-        // En cas d'erreur, restaurer l'état précédent
-        startButton.style.display = originalStartDisplay;
-        stopButton.style.display = originalStopDisplay;
-        showNotification('Erreur lors du démarrage de la détection', 'error');
-    } finally {
-        // Réactiver les boutons
-        startButton.disabled = false;
-        stopButton.disabled = false;
-    }
-}
-
-// Fonction pour arrêter la détection
-async function stopDetection(event) {
-    if (event) event.preventDefault();
-    console.log('Stopping detection...');
-    
-    // Mettre à jour l'interface immédiatement
-    updateButtonState(false);
-    showNotification('Détection arrêtée avec succès');
-    
-    try {
-        const response = await fetch('/stop_detection', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const data = await response.json();
-        console.log('Stop detection response:', data);
-        
-        if (!response.ok) {
-            // En cas d'erreur, revenir à l'état précédent
-            updateButtonState(true);
-            showNotification(data.message || 'Erreur lors de l\'arrêt de la détection', 'error');
-        }
-    } catch (error) {
-        console.error('Erreur:', error);
-        // En cas d'erreur, revenir à l'état précédent
-        updateButtonState(true);
-        showNotification('Erreur lors de l\'arrêt de la détection', 'error');
-    }
-}
-
-// Fonction pour exécuter les tests
-async function runTests() {
-    try {
-        showNotification('Exécution des tests...');
-        
-        const response = await fetch('/run_tests', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const data = await response.json();
-        
-        if (response.ok) {
-            showNotification('Tests terminés, vérifiez les logs du serveur');
-            console.log('Tests terminés:', data.message);
-        } else {
-            showNotification('Erreur lors de l\'exécution des tests', 'error');
-            console.error('Erreur lors des tests:', data.message);
-        }
-    } catch (error) {
-        console.error('Erreur:', error);
-        showNotification('Erreur lors de l\'exécution des tests', 'error');
-    }
-}
-
-// Attacher les événements aux boutons
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, attaching event listeners...');
-    
+    // Éléments de l'interface
     const startButton = document.getElementById('startButton');
     const stopButton = document.getElementById('stopButton');
+    const audioSource = document.getElementById('audio_source');
+    const threshold = document.getElementById('threshold');
+    const delay = document.getElementById('delay');
+    const refreshVbanButton = document.getElementById('refresh_vban');
+    const thresholdOutput = threshold.nextElementSibling;
 
-    if (startButton) {
-        startButton.onclick = startDetection;
-        console.log('Start button listener attached');
+    // Gestion des webhooks
+    const webhookToggles = document.querySelectorAll('[id^="webhook-"][id$="-enabled"]');
+    const webhookInputs = document.querySelectorAll('.webhook-input');
+    const testWebhookButtons = document.querySelectorAll('.test-webhook');
+
+    // Mise à jour de l'affichage du seuil
+    threshold.addEventListener('input', function() {
+        thresholdOutput.textContent = this.value;
+    });
+
+    // Gestion des toggles webhook
+    webhookToggles.forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const content = this.closest('.webhook-card').querySelector('.webhook-content');
+            content.style.display = this.checked ? 'block' : 'none';
+        });
+    });
+
+    // Fonction pour collecter les paramètres
+    function getSettings() {
+        const settings = {
+            audio_source: audioSource.value,
+            threshold: parseFloat(threshold.value),
+            delay: parseFloat(delay.value),
+            webhooks: {}
+        };
+
+        // Collecter les webhooks activés
+        webhookToggles.forEach(toggle => {
+            const id = toggle.id.replace('-enabled', '');
+            const url = document.getElementById(id + '-url')?.value;
+            if (toggle.checked && url) {
+                settings.webhooks[id] = url;
+            }
+        });
+
+        return settings;
     }
 
-    if (stopButton) {
-        stopButton.onclick = stopDetection;
-        console.log('Stop button listener attached');
-    }
+    // Démarrer la détection
+    startButton.addEventListener('click', async function() {
+        try {
+            const settings = getSettings();
+            const response = await fetch('/start_detection', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(settings)
+            });
 
-    // Vérifier l'état initial
+            const data = await response.json();
+            
+            if (response.ok) {
+                showNotification('Détection démarrée avec succès');
+                startButton.style.display = 'none';
+                stopButton.style.display = 'inline-flex';
+            } else {
+                showNotification(data.error || 'Erreur lors du démarrage de la détection', 'error');
+            }
+        } catch (error) {
+            showNotification('Erreur de connexion au serveur', 'error');
+            console.error('Erreur:', error);
+        }
+    });
+
+    // Arrêter la détection
+    stopButton.addEventListener('click', async function() {
+        try {
+            const response = await fetch('/stop_detection', {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+            
+            if (response.ok) {
+                showNotification('Détection arrêtée');
+                stopButton.style.display = 'none';
+                startButton.style.display = 'inline-flex';
+                
+                // Nettoyer la liste des sons détectés
+                const labelsDiv = document.getElementById('detected_labels');
+                labelsDiv.innerHTML = '';
+                
+                // Nettoyer aussi l'affichage du clap si présent
+                const display = document.getElementById('detection_display');
+                display.innerHTML = '';
+                display.classList.remove('clap');
+            } else {
+                showNotification(data.error || 'Erreur lors de l\'arrêt de la détection', 'error');
+            }
+        } catch (error) {
+            showNotification('Erreur de connexion au serveur', 'error');
+            console.error('Erreur:', error);
+        }
+    });
+
+    // Rafraîchir les sources VBAN
+    refreshVbanButton.addEventListener('click', async function() {
+        try {
+            refreshVbanButton.classList.add('refreshing');
+            const response = await fetch('/refresh_vban');
+            const data = await response.json();
+            
+            if (response.ok) {
+                // Mettre à jour la liste des sources
+                const currentSource = audioSource.value;
+                audioSource.innerHTML = ''; // Vider la liste actuelle
+                
+                // Recréer les options avec les nouvelles sources
+                data.sources.forEach(source => {
+                    const option = document.createElement('option');
+                    option.value = source.url || source.name;
+                    option.textContent = source.name;
+                    option.selected = source.url === currentSource || source.name === currentSource;
+                    audioSource.appendChild(option);
+                });
+                
+                showNotification('Sources VBAN mises à jour');
+            } else {
+                showNotification(data.error || 'Erreur lors de la mise à jour des sources VBAN', 'error');
+            }
+        } catch (error) {
+            showNotification('Erreur de connexion au serveur', 'error');
+            console.error('Erreur:', error);
+        } finally {
+            refreshVbanButton.classList.remove('refreshing');
+        }
+    });
+
+    // Tester les webhooks
+    testWebhookButtons.forEach(button => {
+        button.addEventListener('click', async function() {
+            const source = this.dataset.source;
+            const urlInput = this.closest('.webhook-card').querySelector('.webhook-input');
+            const url = urlInput.value;
+
+            if (!url) {
+                showNotification('Veuillez entrer une URL de webhook', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch('/test_webhook', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        url: url,
+                        source: source
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showNotification('Test du webhook réussi');
+                } else {
+                    showNotification(data.error || 'Échec du test du webhook', 'error');
+                }
+            } catch (error) {
+                showNotification('Erreur lors du test du webhook', 'error');
+                console.error('Erreur:', error);
+            }
+        });
+    });
+
+    // Configuration Socket.IO
+    const socket = io.connect('http://' + document.domain + ':' + 16045);
+
+    socket.on('connect', () => {
+        console.log('Connecté au serveur Socket.IO');
+    });
+
+    socket.on('connect_error', (error) => {
+        console.error('Erreur de connexion Socket.IO:', error);
+        showNotification('Erreur de connexion au serveur', 'error');
+    });
+
+    socket.on('clap', (data) => {
+        console.log('Clap détecté:', data);
+        const display = document.getElementById('detection_display');
+        display.innerHTML = '👏';
+        display.classList.add('clap');
+        
+        setTimeout(() => {
+            display.innerHTML = '';
+            display.classList.remove('clap');
+        }, 500);
+    });
+
+    socket.on('labels', (data) => {
+        console.log('Labels reçus:', data);
+        const labelsDiv = document.getElementById('detected_labels');
+        labelsDiv.innerHTML = '';
+        
+        if (data.detected && Array.isArray(data.detected)) {
+            data.detected.forEach(item => {
+                const labelElement = document.createElement('p');
+                labelElement.textContent = item.label;
+                labelsDiv.appendChild(labelElement);
+            });
+        }
+    });
+
+    // Vérifier l'état initial de la détection
     fetch('/status')
         .then(response => response.json())
         .then(data => {
-            console.log('Initial status:', data);
-            updateButtonState(data.running);
+            if (data.running) {
+                startButton.style.display = 'none';
+                stopButton.style.display = 'inline-flex';
+            } else {
+                startButton.style.display = 'inline-flex';
+                stopButton.style.display = 'none';
+            }
         })
         .catch(error => {
-            console.error('Error checking status:', error);
+            console.error('Erreur lors de la vérification du statut:', error);
         });
 });
