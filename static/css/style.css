@@ -642,3 +642,72 @@ footer a {
     font-style: italic;
     padding: 0.5rem 1rem;
 }
+
+/* Styles pour les sources VBAN */
+.list-group-item {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: var(--border-radius);
+    margin-bottom: 0.5rem;
+    padding: 1rem;
+}
+
+.list-group-item .source-name {
+    color: #2c3e50;
+    font-size: 0.95rem;
+}
+
+.list-group-item small {
+    font-size: 0.85rem;
+}
+
+.webhook-section {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.webhook-input-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.webhook-input-group input[type="url"] {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
+}
+
+.btn-danger {
+    background: var(--danger-color);
+    padding: 0.4rem 0.8rem;
+    font-size: 1rem;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+.switch {
+    min-width: 50px;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+.mt-2 {
+    margin-top: 0.5rem;
+}
+
+/* Ajustements pour uniformiser l'apparence */
+.vban-section h5 {
+    color: #6c757d;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding-left: 0.5rem;
+}

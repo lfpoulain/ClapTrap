@@ -6,10 +6,6 @@
     <title>ClapTrap - Détection d'Applaudissements</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.ico') }}">
-    <script>
-        // Initialiser les settings globalement
-        const settings = {{ settings_json|safe }};
-    </script>
 </head>
 
 <body>
@@ -181,6 +177,13 @@
 
     <!-- Charger Socket.IO avant notre script -->
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    
+    <!-- Initialiser les settings avant le script principal -->
+    <script>
+        window.settings = JSON.parse('{{ settings_json|tojson|safe }}');
+    </script>
+    
+    <!-- Charger notre script principal -->
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 
     <template id="vbanDetectedSourceTemplate">
@@ -197,19 +200,23 @@
 
     <template id="vbanSavedSourceTemplate">
         <div class="list-group-item">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <strong class="source-name"></strong>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong class="source-name"></strong>
+                    <small class="text-muted d-block">IP: <span class="source-ip"></span> - Port: <span class="source-port"></span></small>
+                </div>
                 <button class="btn btn-sm btn-danger remove-vban-btn">
-                    <i class="fas fa-trash"></i>
+                    <span>🗑️</span>
                 </button>
             </div>
-            <div class="form-group">
-                <label>Webhook URL</label>
-                <input type="url" class="form-control webhook-url" placeholder="https://...">
-            </div>
-            <div class="form-check mt-2">
-                <input type="checkbox" class="form-check-input source-enabled">
-                <label class="form-check-label">Activé</label>
+            <div class="webhook-section mt-2">
+                <div class="webhook-input-group d-flex align-items-center gap-2">
+                    <input type="url" class="webhook-url form-control" placeholder="URL du webhook">
+                    <label class="switch" title="Activer/Désactiver la source">
+                        <input type="checkbox" class="source-enabled">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
             </div>
         </div>
     </template>

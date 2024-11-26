@@ -577,5 +577,180 @@ def handle_clap(source_type, source_id):
         'timestamp': time.time()
     })
 
+@app.route('/api/vban/save', methods=['POST'])
+def save_vban_source():
+    try:
+        source = request.json
+        print(f"Réception demande d'ajout source VBAN: {source}")  # Debug log
+        
+        # Valider les données requises
+        required_fields = ['name', 'ip', 'port', 'stream_name']
+        if not all(field in source for field in required_fields):
+            print(f"Champs manquants. Reçu: {source}")  # Debug log
+            return jsonify({
+                'success': False,
+                'error': 'Données manquantes pour la source VBAN'
+            }), 400
+        
+        # Charger les paramètres actuels
+        settings = load_settings()
+        
+        # Initialiser la liste si elle n'existe pas
+        if 'saved_vban_sources' not in settings:
+            settings['saved_vban_sources'] = []
+            
+        # Vérifier si la source existe déjà
+        existing_source = next(
+            (s for s in settings['saved_vban_sources'] 
+             if s['ip'] == source['ip'] and s['stream_name'] == source['stream_name']),
+            None
+        )
+        
+        if existing_source:
+            print(f"Source déjà existante: {existing_source}")  # Debug log
+            return jsonify({
+                'success': False,
+                'error': 'Cette source VBAN existe déjà'
+            }), 400
+            
+        # Ajouter la nouvelle source
+        new_source = {
+            'name': source['name'],
+            'ip': source['ip'],
+            'port': source['port'],
+            'stream_name': source['stream_name'],
+            'webhook_url': source.get('webhook_url', ''),
+            'enabled': source.get('enabled', True)
+        }
+        
+        settings['saved_vban_sources'].append(new_source)
+        
+        # Sauvegarder immédiatement les paramètres
+        try:
+            with open(SETTINGS_FILE, 'w') as f:
+                json.dump(settings, f, indent=4)
+            print(f"Source VBAN sauvegardée avec succès: {new_source}")  # Debug log
+            return jsonify({
+                'success': True,
+                'source': new_source
+            })
+        except Exception as e:
+            print(f"Erreur lors de l'écriture dans settings.json: {str(e)}")  # Debug log
+            return jsonify({
+                'success': False,
+                'error': f"Erreur lors de la sauvegarde: {str(e)}"
+            }), 500
+            
+    except Exception as e:
+        print(f"Erreur lors de la sauvegarde de la source VBAN: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/vban/remove', methods=['DELETE'])
+def remove_vban_source():
+    try:
+        data = request.json
+        if not data or 'ip' not in data or 'stream_name' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Données manquantes'
+            }), 400
+            
+        settings = load_settings()
+        
+        if 'saved_vban_sources' not in settings:
+            return jsonify({
+                'success': False,
+                'error': 'Aucune source VBAN configurée'
+            }), 404
+            
+        # Filtrer la source à supprimer
+        initial_count = len(settings['saved_vban_sources'])
+        settings['saved_vban_sources'] = [
+            s for s in settings['saved_vban_sources']
+            if not (s['ip'] == data['ip'] and s['stream_name'] == data['stream_name'])
+        ]
+        
+        if len(settings['saved_vban_sources']) == initial_count:
+            return jsonify({
+                'success': False,
+                'error': 'Source non trouvée'
+            }), 404
+            
+        # Sauvegarder les modifications
+        success, message = save_settings(settings)
+        
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({
+                'success': False,
+                'error': message
+            }), 500
+            
+    except Exception as e:
+        print(f"Erreur lors de la suppression de la source VBAN: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/vban/update', methods=['PUT'])
+def update_vban_source():
+    try:
+        source = request.json
+        print(f"Mise à jour source VBAN reçue: {source}")  # Debug log
+        
+        if not source or 'ip' not in source:
+            return jsonify({
+                'success': False,
+                'error': 'Données manquantes'
+            }), 400
+            
+        settings = load_settings()
+        
+        if 'saved_vban_sources' not in settings:
+            settings['saved_vban_sources'] = []
+            
+        # Trouver et mettre à jour la source
+        source_found = False
+        for s in settings['saved_vban_sources']:
+            if (s['ip'] == source['ip'] and 
+                (s['stream_name'] == source.get('stream_name') or 
+                 s['stream_name'] == source.get('name'))):
+                # Mettre à jour tous les champs fournis
+                for key in ['name', 'port', 'stream_name', 'webhook_url', 'enabled']:
+                    if key in source:
+                        s[key] = source[key]
+                source_found = True
+                break
+                
+        if not source_found:
+            print(f"Source non trouvée. Sources existantes: {settings['saved_vban_sources']}")  # Debug log
+            return jsonify({
+                'success': False,
+                'error': 'Source non trouvée'
+            }), 404
+            
+        # Sauvegarder les modifications
+        success, message = save_settings(settings)
+        
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({
+                'success': False,
+                'error': message
+            }), 500
+            
+    except Exception as e:
+        print(f"Erreur lors de la mise à jour de la source VBAN: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
     socketio.run(app, debug=True, port=16045, allow_unsafe_werkzeug=True)

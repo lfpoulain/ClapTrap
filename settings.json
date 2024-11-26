@@ -1,6 +1,6 @@
 {
     "global": {
-        "threshold": "0.5",
+        "threshold": "0.1",
         "delay": "1.0",
         "chunk_duration": 0.5,
         "buffer_duration": 1
@@ -26,6 +26,14 @@
             "ip": "",
             "port": 6980,
             "stream_name": "",
+            "webhook_url": "",
+            "enabled": true
+        },
+        {
+            "name": "Talkie",
+            "ip": "192.168.68.74",
+            "port": 6980,
+            "stream_name": "Talkie",
             "webhook_url": "",
             "enabled": true
         }
