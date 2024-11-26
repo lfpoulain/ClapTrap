@@ -619,3 +619,26 @@ footer a {
 .vban-source-info {
     display: none;
 }
+
+.vban-section {
+    margin-bottom: 1.5rem;
+}
+
+.vban-section h5 {
+    margin-bottom: 0.5rem;
+    color: #666;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.list-group-item.text-muted {
+    color: #6c757d;
+    font-style: italic;
+    padding: 0.5rem 1rem;
+}
+
+.list-group-item.text-danger {
+    color: #dc3545;
+    font-style: italic;
+    padding: 0.5rem 1rem;
+}

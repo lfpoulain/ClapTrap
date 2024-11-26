@@ -7,72 +7,182 @@ function showNotification(message, type = 'success') {
     notification.className = `notification ${type}`;
     notification.style.display = 'block';
     
-    // Force le reflow pour déclencher l'animation
-    notification.offsetHeight;
-    
-    // Ajoute la classe show pour déclencher l'animation
-    notification.classList.add('show');
-    
     setTimeout(() => {
-        notification.classList.remove('show');
-        // Attendre la fin de l'animation avant de cacher
-        setTimeout(() => {
-            notification.style.display = 'none';
-        }, 300);
+        notification.style.display = 'none';
     }, 3000);
 }
 
-// Ajouter la fonction refreshVBANSources
-function refreshVBANSources() {
-    const refreshBtn = document.getElementById('refreshVBAN');
-    const sourceSelect = document.getElementById('vbanSourceSelect');
+function showError(message) {
+    showNotification(message, 'error');
+}
+
+// Fonction pour afficher les sources VBAN sauvegardées
+function displaySavedVBANSources(sources) {
+    const container = document.getElementById('savedVBANSources');
+    if (!container) {
+        console.error('Container savedVBANSources non trouvé');
+        return;
+    }
     
-    if (!refreshBtn || !sourceSelect) return;
+    container.innerHTML = ''; // Nettoyer la liste existante
     
-    // Ajouter la classe pour l'animation
-    refreshBtn.classList.add('rotating');
-    sourceSelect.innerHTML = '<option value="">Recherche des sources VBAN...</option>';
-    
-    fetch('/refresh_vban')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Erreur réseau');
+    if (sources && sources.length > 0) {
+        sources.forEach(source => {
+            const template = document.getElementById('vbanSavedSourceTemplate');
+            if (!template) {
+                console.error('Template vbanSavedSourceTemplate non trouvé');
+                return;
             }
-            return response.json();
-        })
+            
+            const clone = document.importNode(template.content, true);
+            
+            clone.querySelector('.source-name').textContent = source.name;
+            clone.querySelector('.webhook-url').value = source.webhook_url;
+            clone.querySelector('.source-enabled').checked = source.enabled;
+            
+            const removeButton = clone.querySelector('.remove-vban-btn');
+            removeButton.addEventListener('click', () => removeVBANSource(source));
+            
+            container.appendChild(clone);
+        });
+    } else {
+        container.innerHTML = '<div class="list-group-item text-muted">Aucune source VBAN configurée</div>';
+    }
+}
+
+// Fonction pour rafraîchir les sources VBAN détectées
+function refreshVBANSources() {
+    const container = document.getElementById('detectedVBANSources');
+    if (!container) {
+        console.error('Container detectedVBANSources non trouvé');
+        return;
+    }
+
+    // Afficher un message de chargement
+    container.innerHTML = '<div class="list-group-item text-muted">Chargement des sources VBAN...</div>';
+
+    fetch('/refresh_vban')
+        .then(response => response.json())
         .then(data => {
-            console.log('Sources VBAN reçues:', data); // Debug log
-            sourceSelect.innerHTML = '<option value="">Sélectionner une source VBAN</option>';
+            container.innerHTML = ''; // Nettoyer la liste existante
             
             if (data.sources && data.sources.length > 0) {
                 data.sources.forEach(source => {
-                    const option = document.createElement('option');
-                    option.value = `vban_${source.name}_${source.ip}_${source.port}`;
-                    option.textContent = `${source.name} (${source.ip}:${source.port}) - ${source.channels} canal${source.channels > 1 ? 'x' : ''} @ ${source.sample_rate}Hz`;
-                    sourceSelect.appendChild(option);
+                    const template = document.getElementById('vbanDetectedSourceTemplate');
+                    if (!template) {
+                        throw new Error('Template vbanDetectedSourceTemplate non trouvé');
+                    }
+                    
+                    const clone = document.importNode(template.content, true);
+                    
+                    clone.querySelector('.source-name').textContent = source.name;
+                    clone.querySelector('.source-ip').textContent = source.ip;
+                    clone.querySelector('.source-port').textContent = source.port;
+                    
+                    const addButton = clone.querySelector('.add-vban-btn');
+                    addButton.addEventListener('click', () => addVBANSource(source));
+                    
+                    container.appendChild(clone);
                 });
             } else {
-                sourceSelect.innerHTML = '<option value="">Aucune source VBAN détectée</option>';
+                container.innerHTML = '<div class="list-group-item text-muted">Aucune source VBAN détectée</div>';
             }
         })
         .catch(error => {
             console.error('Erreur lors du rafraîchissement des sources VBAN:', error);
-            sourceSelect.innerHTML = '<option value="">Erreur lors de la recherche des sources</option>';
-        })
-        .finally(() => {
-            refreshBtn.classList.remove('rotating');
+            container.innerHTML = '<div class="list-group-item text-danger">Erreur lors du chargement des sources VBAN</div>';
+            showError('Erreur lors du rafraîchissement des sources VBAN');
         });
 }
 
-let clapTimeout = null;
+// Fonction pour ajouter une source VBAN
+function addVBANSource(source) {
+    const newSource = {
+        name: source.name,
+        ip: source.ip,
+        port: source.port,
+        stream_name: source.stream_name,
+        webhook_url: '',
+        enabled: true
+    };
+
+    fetch('/api/vban/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newSource)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Source VBAN ajoutée avec succès');
+            // Rafraîchir l'affichage des sources sauvegardées
+            if (typeof settings !== 'undefined') {
+                settings.saved_vban_sources = settings.saved_vban_sources || [];
+                settings.saved_vban_sources.push(newSource);
+                displaySavedVBANSources(settings.saved_vban_sources);
+            }
+        } else {
+            throw new Error(data.error || 'Erreur lors de l\'ajout de la source');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showError(error.message);
+    });
+}
+
+// Fonction pour supprimer une source VBAN
+function removeVBANSource(source) {
+    fetch(`/api/vban/remove`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            ip: source.ip,
+            stream_name: source.stream_name
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Source VBAN supprimée avec succès');
+            // Mettre à jour la liste locale
+            if (typeof settings !== 'undefined') {
+                settings.saved_vban_sources = settings.saved_vban_sources.filter(s => 
+                    !(s.ip === source.ip && s.stream_name === source.stream_name)
+                );
+                displaySavedVBANSources(settings.saved_vban_sources);
+            }
+        } else {
+            throw new Error(data.error || 'Erreur lors de la suppression de la source');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showError(error.message);
+    });
+}
 
 document.addEventListener('DOMContentLoaded', function() {
-    const refreshBtn = document.getElementById('refreshVBAN');
+    const refreshBtn = document.getElementById('refreshVBANBtn');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', refreshVBANSources);
-        // Rafraîchir automatiquement au chargement
-        setTimeout(refreshVBANSources, 1000); // Attendre 1s après le chargement
     }
+    
+    // Vérifier l'existence de settings avant de l'utiliser
+    if (typeof settings !== 'undefined') {
+        // Charger les sources sauvegardées initiales
+        displaySavedVBANSources(settings.saved_vban_sources || []);
+    } else {
+        console.error('Settings non définis');
+        showNotification('Erreur de chargement des paramètres', 'error');
+    }
+    
+    // Rafraîchir les sources détectées au chargement
+    refreshVBANSources();
 
     // Configuration Socket.IO avec le port explicite
     const socket = io.connect('http://' + document.domain + ':16045', {

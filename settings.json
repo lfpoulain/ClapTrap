@@ -19,5 +19,15 @@
         "port": 6980,
         "webhook_url": "",
         "enabled": false
-    }
+    },
+    "saved_vban_sources": [
+        {
+            "name": "",
+            "ip": "",
+            "port": 6980,
+            "stream_name": "",
+            "webhook_url": "",
+            "enabled": true
+        }
+    ]
 }

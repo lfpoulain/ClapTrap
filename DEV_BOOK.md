@@ -60,8 +60,38 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
        + réalisation d'un proto utilisant pyVBAN pour lister les sources vban émettrices. [OK]
        + Ajouter une section VBAN qui liste les sources VBAN disponibles en train d'émettre. [OK]
        + Permettre l'ajout/suppression dynamique des sources VBAN qu'on veut garder
-       + Ajouter un champ webhook pour chaque source VBAN ajoutée
-       + Afficher le statut de connexion pour chaque source
+         * Modification du modèle de données [TODO]
+           - Ajouter une section "saved_vban_sources" dans settings.json [OK]
+           - Stocker pour chaque source : nom, ip, port, webhook_url, stream_name, enabled
+         
+         * Interface utilisateur [TODO]
+           - Afficher deux listes distinctes :
+             > Sources VBAN détectées (actuellement émettant)
+             > Sources VBAN sauvegardées (configuration permanente)
+           - Ajouter un bouton "+" à côté de chaque source détectée
+           - Ajouter un bouton "-" à côté de chaque source sauvegardée
+           - Ajouter un champ webhook_url pour chaque source sauvegardée
+           - Ajouter un switch enabled/disabled pour chaque source sauvegardée
+         
+         * Backend [TODO]
+           - Créer une route POST /api/vban/save pour sauvegarder une nouvelle source
+           - Créer une route DELETE /api/vban/remove pour supprimer une source
+           - Créer une route PUT /api/vban/update pour mettre à jour les paramètres
+           - Implémenter la persistance dans settings.json
+           - Gérer la validation des données
+         
+         * Tests et validation [TODO]
+           - Tester l'ajout d'une nouvelle source
+           - Tester la suppression d'une source
+           - Tester la mise à jour des paramètres
+           - Vérifier la persistance après redémarrage
+           - Valider la gestion des doublons
+         
+         * Documentation [TODO]
+           - Documenter le nouveau format de settings.json
+           - Mettre à jour la documentation utilisateur
+           - Documenter les nouvelles routes API
+           - Ajouter des exemples d'utilisation
      * Section RTSP
        + Ajouter un champ webhook pour chaque flux RTSP
        + Permettre l'ajout/suppression des flux

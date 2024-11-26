@@ -27,6 +27,81 @@ SETTINGS_TEMP = os.path.join(BASE_DIR, 'settings.json.tmp')
 # Variable globale pour le détecteur
 detector = None
 
+class VBANSource:
+    def __init__(self, name, ip, port, stream_name, webhook_url, enabled=True):
+        self.name = name
+        self.ip = ip
+        self.port = port
+        self.stream_name = stream_name
+        self.webhook_url = webhook_url
+        self.enabled = enabled
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "ip": self.ip,
+            "port": self.port,
+            "stream_name": self.stream_name,
+            "webhook_url": self.webhook_url,
+            "enabled": self.enabled
+        }
+
+    @staticmethod
+    def from_dict(data):
+        return VBANSource(
+            name=data.get("name", ""),
+            ip=data.get("ip", ""),
+            port=data.get("port", 6980),
+            stream_name=data.get("stream_name", ""),
+            webhook_url=data.get("webhook_url", ""),
+            enabled=data.get("enabled", True)
+        )
+
+class Settings:
+    def __init__(self, settings):
+        self.settings = settings
+
+    def get_saved_vban_sources(self):
+        sources = self.settings.get("saved_vban_sources", [])
+        return [VBANSource.from_dict(source) for source in sources]
+
+    def save_vban_source(self, source: VBANSource):
+        if "saved_vban_sources" not in self.settings:
+            self.settings["saved_vban_sources"] = []
+        
+        # Vérifier si la source existe déjà (même IP et stream_name)
+        existing_sources = self.settings["saved_vban_sources"]
+        for i, existing in enumerate(existing_sources):
+            if existing["ip"] == source.ip and existing["stream_name"] == source.stream_name:
+                # Mettre à jour la source existante
+                existing_sources[i] = source.to_dict()
+                self.save()
+                return
+        
+        # Ajouter nouvelle source
+        self.settings["saved_vban_sources"].append(source.to_dict())
+        self.save()
+
+    def remove_vban_source(self, ip: str, stream_name: str):
+        if "saved_vban_sources" not in self.settings:
+            return
+        
+        self.settings["saved_vban_sources"] = [
+            source for source in self.settings["saved_vban_sources"]
+            if not (source["ip"] == ip and source["stream_name"] == stream_name)
+        ]
+        self.save()
+
+    def update_vban_source(self, ip: str, stream_name: str, updates: dict):
+        if "saved_vban_sources" not in self.settings:
+            return
+        
+        for source in self.settings["saved_vban_sources"]:
+            if source["ip"] == ip and source["stream_name"] == stream_name:
+                source.update(updates)
+                self.save()
+                break
+
 def save_settings(new_settings):
     """Sauvegarde les paramètres avec une gestion d'erreurs améliorée"""
     try:
@@ -165,11 +240,13 @@ def index():
                 'name': device['name']
             })
     
+    # Passer settings en tant que variable JavaScript
     return render_template('index.html', 
                          settings=settings, 
                          devices=input_devices, 
                          flux=flux['audio_streams'],
-                         debug=app.debug)
+                         debug=app.debug,
+                         settings_json=json.dumps(settings))
 
 def verify_settings_saved(new_settings, saved_settings):
     """Vérifie que les paramètres ont été correctement sauvegardés"""

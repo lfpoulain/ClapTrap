@@ -6,6 +6,10 @@
     <title>ClapTrap - Détection d'Applaudissements</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.ico') }}">
+    <script>
+        // Initialiser les settings globalement
+        const settings = {{ settings_json|safe }};
+    </script>
 </head>
 
 <body>
@@ -110,14 +114,26 @@
                                 <span class="webhook-icon">🎵</span>
                                 Sources VBAN
                             </h4>
-                            <button id="refreshVBAN" class="refresh-btn">
+                            <button id="refreshVBANBtn" class="refresh-btn">
                                 <img src="{{ url_for('static', filename='img/refresh.svg') }}" alt="Rafraîchir">
                             </button>
                         </div>
                         <div class="webhook-content">
-                            <select id="vbanSourceSelect" class="vban-select">
-                                <option value="">Chargement des sources VBAN...</option>
-                            </select>
+                            <!-- Sources détectées -->
+                            <div class="vban-section">
+                                <h5>Sources détectées</h5>
+                                <div id="detectedVBANSources" class="list-group mb-3">
+                                    <div class="list-group-item text-muted">Aucune source VBAN détectée</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Sources sauvegardées -->
+                            <div class="vban-section">
+                                <h5>Sources configurées</h5>
+                                <div id="savedVBANSources" class="list-group">
+                                    <div class="list-group-item text-muted">Aucune source VBAN configurée</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -166,6 +182,37 @@
     <!-- Charger Socket.IO avant notre script -->
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+    <template id="vbanDetectedSourceTemplate">
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+                <strong class="source-name"></strong>
+                <small class="text-muted d-block">IP: <span class="source-ip"></span> - Port: <span class="source-port"></span></small>
+            </div>
+            <button class="btn btn-sm btn-success add-vban-btn">
+                <i class="fas fa-plus"></i> Ajouter
+            </button>
+        </div>
+    </template>
+
+    <template id="vbanSavedSourceTemplate">
+        <div class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong class="source-name"></strong>
+                <button class="btn btn-sm btn-danger remove-vban-btn">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="form-group">
+                <label>Webhook URL</label>
+                <input type="url" class="form-control webhook-url" placeholder="https://...">
+            </div>
+            <div class="form-check mt-2">
+                <input type="checkbox" class="form-check-input source-enabled">
+                <label class="form-check-label">Activé</label>
+            </div>
+        </div>
+    </template>
 </body>
 </html>
 
