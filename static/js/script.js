@@ -252,6 +252,20 @@ function initializeApp() {
     }
 
     initializeRTSPWebhooks();
+
+    // Chercher le curseur de précision et son affichage
+    const thresholdSlider = document.getElementById('threshold');
+    const thresholdValue = document.getElementById('threshold-value');
+
+    // Ajouter un event listener pour mettre à jour l'affichage en temps réel
+    thresholdSlider.addEventListener('input', function() {
+        thresholdValue.textContent = this.value;
+    });
+
+    // Mettre à jour l'affichage initial
+    if (thresholdSlider && thresholdValue) {
+        thresholdValue.textContent = thresholdSlider.value;
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {

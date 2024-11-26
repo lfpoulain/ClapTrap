@@ -736,17 +736,15 @@ def update_vban_source():
                 'error': 'Source non trouvée'
             }), 404
             
-        # Sauvegarder directement dans le fichier
-        try:
-            with open(SETTINGS_FILE, 'w') as f:
-                json.dump(settings, f, indent=4)
-            print(f"Settings sauvegardés avec succès: {settings}")  # Debug log
+        # Sauvegarder les modifications
+        success, message = save_settings(settings)
+        
+        if success:
             return jsonify({'success': True})
-        except Exception as e:
-            print(f"Erreur lors de l'écriture dans settings.json: {str(e)}")  # Debug log
+        else:
             return jsonify({
                 'success': False,
-                'error': f"Erreur lors de la sauvegarde: {str(e)}"
+                'error': message
             }), 500
             
     except Exception as e:
