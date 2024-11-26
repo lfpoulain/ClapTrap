@@ -40,23 +40,24 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
 
 ## Plan d'action pour l'intégration des webhooks
 
-1. Modification du modèle de données
+1. Modification du modèle de données [OK]
    - Définir la structure pour stocker les webhooks dans settings.json [OK]
    - Ajouter un champ webhook_url pour chaque type de source [OK]
    - Mettre à jour la validation des paramètres [OK]
 
 2. Mise à jour de l'interface utilisateur
-   - Ajouter de l'interface pour le webhook pour chaque source
-     * Section Microphones
+   - Ajouter de l'interface pour le webhook pour chaque source [OK]
+     * Section Microphones [OK]
        + Ajouter un champ webhook global unique pour tous les micros [OK]
        + Déplacer la liste de sélection des micro (Source Audio) à côté de Microphone au niveau de la section webhook [OK]
        + Dans cette Source Audio, nafficher que les micro du systeme. [OK]
-       + Faire apparaitre l'icone des mains quand un clap est détecté
-       + Lister les sons captés par le micro.
+       + Faire apparaitre l'icone des mains quand un clap est détecté [OK]
+       + Lister les sons captés par le micro. [OK]
        + Ajouter des radio buttons pour la sélection du micro actif [OK]
        + Quand le radio bouton est OFF, le son en provenance de cette source ne doit pas être capté. [OK]
        + Masquer les champs webhook pour les micros inactifs [OK]
      * Section VBAN
+       + réalisation d'un proto utilisant pyVBAN pour lister les sources vban émettrices. [OK]
        + Ajouter une section VBAN qui liste les sources VBAN disponibles en train d'émettre.
        + Permettre l'ajout/suppression dynamique des sources VBAN qu'on veut garder
        + Ajouter un champ webhook pour chaque source VBAN ajoutée

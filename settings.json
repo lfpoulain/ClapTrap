@@ -9,7 +9,8 @@
         "device_index": 9,
         "audio_source": "Microphone iMac",
         "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
-        "enabled": true
+        "enabled": true,
+        "webhook_enabled": true
     },
     "rtsp_sources": [],
     "vban": {
