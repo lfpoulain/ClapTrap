@@ -64,6 +64,7 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
    - Ajouter une validation basique du format URL
    - Ajouter une icône ou un bouton de test du webhook
    - Ajouter des tooltips explicatifs sur le format attendu
+   - Griser les éléments quand la détection est lancée.
 
 3. Implémentation du backend
    - Créer une fonction de validation des URLs webhook
