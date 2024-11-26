@@ -27,6 +27,10 @@ SETTINGS_TEMP = os.path.join(BASE_DIR, 'settings.json.tmp')
 # Variable globale pour le détecteur
 detector = None
 
+# Créer une instance globale de VBANDiscovery
+vban_discovery = VBANDiscovery()
+vban_discovery.start()  # Démarrer la découverte
+
 class VBANSource:
     def __init__(self, name, ip, port, stream_name, webhook_url, enabled=True):
         self.name = name
@@ -783,13 +787,24 @@ def get_rtsp_streams():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/vban/sources', methods=['GET'])
+@app.route('/api/vban/sources')
 def get_vban_sources():
     try:
-        # Utiliser la fonction existante refresh_vban
-        return refresh_vban()
+        sources = vban_discovery.get_active_sources()
+        formatted_sources = []
+        for source in sources:
+            formatted_sources.append({
+                'name': source.stream_name,
+                'ip': source.ip,
+                'port': source.port,
+                'channels': source.channels,
+                'sample_rate': source.sample_rate,
+                'id': f'vban_{source.ip}_{source.port}'
+            })
+        return jsonify(formatted_sources)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"Erreur lors de la récupération des sources VBAN: {str(e)}")  # Debug log
+        return jsonify({'error': str(e)}), 400
 
 @app.route('/api/vban/saved-sources', methods=['GET'])
 def get_saved_vban_sources():
@@ -815,5 +830,13 @@ def save_settings_api():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
+def cleanup():
+    """Fonction de nettoyage à l'arrêt de l'application"""
+    if vban_discovery:
+        vban_discovery.stop()
+
 if __name__ == '__main__':
-    socketio.run(app, debug=True, port=16045, allow_unsafe_werkzeug=True)
+    try:
+        socketio.run(app, debug=True, port=16045, allow_unsafe_werkzeug=True)
+    finally:
+        cleanup()

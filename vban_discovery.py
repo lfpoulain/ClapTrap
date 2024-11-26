@@ -2,7 +2,7 @@ import socket
 import threading
 import time
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import List, Optional, Dict
 
 @dataclass
 class VBANSource:
@@ -14,46 +14,60 @@ class VBANSource:
     channels: int
     
 class VBANDiscovery:
-    def __init__(self, bind_ip: str = "0.0.0.0", bind_port: int = 6980):
+    def __init__(self, bind_ip: str = '0.0.0.0', bind_port: int = 6980):
         self.bind_ip = bind_ip
         self.bind_port = bind_port
         self.sources: Dict[str, VBANSource] = {}
         self.running = False
         self._lock = threading.Lock()
+        self._thread: Optional[threading.Thread] = None
+        self._sock: Optional[socket.socket] = None
         
     def start(self):
-        """Démarre la découverte des sources VBAN"""
-        self.running = True
-        self._discovery_thread = threading.Thread(target=self._discovery_loop)
-        self._discovery_thread.daemon = True
-        self._discovery_thread.start()
+        if self.running:
+            return
         
+        try:
+            self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self._sock.bind((self.bind_ip, self.bind_port))
+            self.running = True
+            self._thread = threading.Thread(target=self._discovery_loop)
+            self._thread.daemon = True
+            self._thread.start()
+        except Exception as e:
+            print(f"Erreur lors du démarrage de la découverte VBAN: {e}")
+            if self._sock:
+                self._sock.close()
+            self.running = False
+            
     def stop(self):
-        """Arrête la découverte"""
         self.running = False
-        if hasattr(self, '_discovery_thread'):
-            self._discovery_thread.join()
+        if self._sock:
+            self._sock.close()
+        if self._thread:
+            self._thread.join(timeout=1.0)
+            self._thread = None
             
     def _discovery_loop(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind((self.bind_ip, self.bind_port))
-        sock.settimeout(1.0)
-        
         while self.running:
             try:
-                data, addr = sock.recvfrom(1436)  # Taille max d'un paquet VBAN
+                data, addr = self._sock.recvfrom(1024)
                 if self._is_vban_packet(data):
                     source = self._parse_vban_packet(data, addr)
                     if source:
                         with self._lock:
-                            key = f"{addr[0]}:{addr[1]}"
+                            key = f"{source.ip}:{source.port}_{source.stream_name}"
                             self.sources[key] = source
-            except socket.timeout:
-                self._cleanup_old_sources()
-                continue
+                        self._cleanup_old_sources()
             except Exception as e:
-                print(f"Erreur lors de la découverte VBAN: {e}")
-                
+                print(f"Erreur dans la boucle de découverte VBAN: {e}")
+                break
+        
+        self.running = False
+        if self._sock:
+            self._sock.close()
+            
     def _is_vban_packet(self, data: bytes) -> bool:
         """Vérifie si le paquet reçu est un paquet VBAN valide"""
         return len(data) >= 4 and data[:4] == b'VBAN'
@@ -98,14 +112,22 @@ class VBANDiscovery:
         current_time = time.time()
         with self._lock:
             self.sources = {
-                k: v for k, v in self.sources.items()
-                if (current_time - v.last_seen) <= max_age
+                key: source for key, source in self.sources.items()
+                if (current_time - source.last_seen) <= max_age
             }
             
     def get_active_sources(self) -> List[VBANSource]:
         """Retourne la liste des sources actives"""
-        with self._lock:
-            return list(self.sources.values())
+        try:
+            with self._lock:
+                # S'assurer que self.sources est initialisé
+                if not hasattr(self, 'sources'):
+                    self.sources = {}
+                # Convertir les valeurs du dictionnaire en liste
+                return list(self.sources.values())
+        except Exception as e:
+            print(f"Erreur dans get_active_sources: {str(e)}")
+            return []
 
 # Example d'utilisation
 if __name__ == "__main__":
