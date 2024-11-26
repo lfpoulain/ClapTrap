@@ -81,12 +81,17 @@ h1 {
     align-items: center;
     justify-content: center;
     font-size: 100px;
-    transition: all var(--transition-speed);
+    transition: all 0.3s ease;
+    margin-bottom: 2rem;
+    border: 2px solid transparent;
 }
 
 #detection_display.clap {
     background: var(--success-color);
     transform: scale(1.1);
+    color: white;
+    border-color: var(--success-color);
+    box-shadow: 0 0 20px rgba(40, 167, 69, 0.3);
 }
 
 /* Configuration Panel */
@@ -357,21 +362,45 @@ footer a {
 
 #detected_labels {
     width: 100%;
-    margin-top: 1rem;
+    margin-top: 2rem;
     padding: 1rem;
     background: var(--background-color);
     border-radius: var(--border-radius);
-    max-height: 200px;
+    max-height: 300px;
     overflow-y: auto;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
 }
 
 #detected_labels p {
-    padding: 0.5rem;
-    margin: 0.25rem 0;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
     background: white;
     border-radius: var(--border-radius);
     font-size: 0.9rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+#detected_labels p:first-child {
+    background: #e8f5e9;
+    border-left-color: var(--success-color);
+    font-weight: 500;
+}
+
+/* Ajout d'une barre de défilement personnalisée */
+#detected_labels::-webkit-scrollbar {
+    width: 8px;
+}
+
+#detected_labels::-webkit-scrollbar-track {
+    background: var(--background-color);
+    border-radius: var(--border-radius);
+}
+
+#detected_labels::-webkit-scrollbar-thumb {
+    background: var(--secondary-color);
+    border-radius: var(--border-radius);
 }
 
 .control-panel {
@@ -379,4 +408,60 @@ footer a {
     gap: 1rem;
     justify-content: center;
     width: 100%;
+}
+
+.webhook-content .source-selector {
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.webhook-content .source-selector label {
+    min-width: 100px;
+    margin-bottom: 0;
+}
+
+.webhook-content .source-selector select {
+    flex: 1;
+}
+
+.mb-3 {
+    margin-bottom: 1rem;
+}
+
+.clap-indicator {
+    display: inline-block;
+    margin-left: 10px;
+}
+
+.clap-icon {
+    display: none;
+    color: #4CAF50;
+    font-size: 24px;
+    animation: clap-animation 0.5s ease-in-out;
+}
+
+@keyframes clap-animation {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); opacity: 0; }
+}
+
+.clap-icon.active {
+    display: inline-block;
+}
+
+.labels-container {
+    margin-top: 10px;
+    display: none;
+}
+
+.label {
+    display: inline-block;
+    background-color: #f0f0f0;
+    padding: 5px 10px;
+    margin: 3px;
+    border-radius: 15px;
+    font-size: 14px;
 }

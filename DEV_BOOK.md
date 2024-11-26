@@ -49,8 +49,10 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
    - Ajouter de l'interface pour le webhook pour chaque source
      * Section Microphones
        + Ajouter un champ webhook global unique pour tous les micros [OK]
-       + Déplacer la liste de sélection des micro (Source Audio) à côté de Microphone au niveau de la section webhook
-       + Dans cette Source Audio, nafficher que les micro du systeme.
+       + Déplacer la liste de sélection des micro (Source Audio) à côté de Microphone au niveau de la section webhook [OK]
+       + Dans cette Source Audio, nafficher que les micro du systeme. [OK]
+       + Faire apparaitre l'icone des mains quand un clap est détecté
+       + Lister les sons captés par le micro.
        + Ajouter des radio buttons pour la sélection du micro actif
        + Masquer les champs webhook pour les micros inactifs
      * Section VBAN

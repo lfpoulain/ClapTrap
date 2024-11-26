@@ -27,41 +27,60 @@ detector = None
 
 def save_settings(new_settings):
     """Sauvegarde les paramètres avec une gestion d'erreurs améliorée"""
-    print("Tentative de mise à jour des paramètres:", new_settings)
-    
     try:
-        # Vérifier si le fichier existe déjà
+        # Charger les paramètres existants ou utiliser la structure par défaut
+        default_settings = {
+            "global": {
+                "threshold": "0.5",
+                "delay": "1.0"
+            },
+            "microphone": {
+                "device_index": "0",
+                "audio_source": "default",
+                "webhook_url": "",
+                "enabled": False
+            },
+            "rtsp_sources": [],
+            "vban": {
+                "stream_name": "",
+                "ip": "0.0.0.0",
+                "port": 6980,
+                "webhook_url": "",
+                "enabled": False
+            }
+        }
+
+        # Charger les paramètres existants s'ils existent
+        current_settings = default_settings.copy()
         if os.path.exists(SETTINGS_FILE):
-            # Charger les paramètres existants
             with open(SETTINGS_FILE, 'r') as f:
-                settings = json.load(f)
-        else:
-            settings = {}
+                current_settings.update(json.load(f))
 
-        # Mise à jour des paramètres globaux
+        # Mettre à jour avec les nouveaux paramètres
         if 'global' in new_settings:
-            settings['global'] = new_settings['global']
-
-        # Mise à jour des paramètres du microphone
+            current_settings['global'].update(new_settings['global'])
         if 'microphone' in new_settings:
-            settings['microphone'] = new_settings['microphone']
-
-        # Mise à jour des sources RTSP
+            # S'assurer que device_index est un entier
+            if 'device_index' in new_settings['microphone']:
+                try:
+                    # Convertir en entier si c'est une chaîne
+                    device_index = int(new_settings['microphone']['device_index'])
+                    new_settings['microphone']['device_index'] = device_index
+                except (ValueError, TypeError):
+                    print(f"Erreur de conversion de device_index: {new_settings['microphone']['device_index']}")
+            current_settings['microphone'].update(new_settings['microphone'])
         if 'rtsp_sources' in new_settings:
-            settings['rtsp_sources'] = new_settings['rtsp_sources']
-
-        # Mise à jour des paramètres VBAN
+            current_settings['rtsp_sources'] = new_settings['rtsp_sources']
         if 'vban' in new_settings:
-            settings['vban'] = new_settings['vban']
+            current_settings['vban'].update(new_settings['vban'])
 
         # Sauvegarder dans un fichier temporaire d'abord
         with open(SETTINGS_TEMP, 'w') as f:
-            json.dump(settings, f, indent=4)
+            json.dump(current_settings, f, indent=4)
         
         # Si l'écriture a réussi, remplacer le fichier original
         os.replace(SETTINGS_TEMP, SETTINGS_FILE)
         
-        print("Paramètres sauvegardés avec succès:", settings)
         return True, "Paramètres sauvegardés avec succès"
             
     except Exception as e:
@@ -81,28 +100,74 @@ def load_flux():
 
 def load_settings():
     """Charge les paramètres avec gestion d'erreurs améliorée"""
+    default_settings = {
+        "global": {
+            "threshold": "0.5",
+            "delay": "1.0"
+        },
+        "microphone": {
+            "device_index": "0",
+            "audio_source": "default",
+            "webhook_url": "",
+            "enabled": False
+        },
+        "rtsp_sources": [],
+        "vban": {
+            "stream_name": "",
+            "ip": "0.0.0.0",
+            "port": 6980,
+            "webhook_url": "",
+            "enabled": False
+        }
+    }
+    
     try:
         if os.path.exists(SETTINGS_FILE):
             with open(SETTINGS_FILE, 'r') as f:
                 settings = json.load(f)
-                print("Paramètres chargés :", settings)
-                return settings
+                
+            # Fusionner avec les paramètres par défaut pour s'assurer que toutes les clés existent
+            merged_settings = default_settings.copy()
+            merged_settings.update(settings)
+            
+            # S'assurer que la section microphone contient audio_source
+            if 'audio_source' not in merged_settings['microphone']:
+                merged_settings['microphone']['audio_source'] = default_settings['microphone']['audio_source']
+                
+            # Sauvegarder les paramètres fusionnés
+            with open(SETTINGS_FILE, 'w') as f:
+                json.dump(merged_settings, f, indent=4)
+                
+            return merged_settings
     except Exception as e:
         print(f"Erreur lors du chargement des paramètres: {str(e)}")
-    return {}
+        
+    # En cas d'erreur ou si le fichier n'existe pas, créer avec les paramètres par défaut
+    with open(SETTINGS_FILE, 'w') as f:
+        json.dump(default_settings, f, indent=4)
+    
+    return default_settings
 
 @app.route('/')
 def index():
     settings = load_settings()  # Charge les paramètres depuis le fichier JSON
     all_devices = sd.query_devices()  # Obtient la liste de tous les périphériques audio
     flux = load_flux()
-    print(flux['audio_streams'])
-    input_devices = [device for device in all_devices if device['max_input_channels'] > 0]  # Filtrer pour garder seulement les périphériques d'entrée
+    
+    # Convertir les périphériques en dictionnaire avec index et nom
+    input_devices = []
+    for idx, device in enumerate(all_devices):
+        if device['max_input_channels'] > 0:
+            input_devices.append({
+                'index': idx,
+                'name': device['name']
+            })
+    
     return render_template('index.html', 
                          settings=settings, 
                          devices=input_devices, 
                          flux=flux['audio_streams'],
-                         debug=app.debug)  # Ajout de la variable debug
+                         debug=app.debug)
 
 def verify_settings_saved(new_settings, saved_settings):
     """Vérifie que les paramètres ont été correctement sauvegardés"""
@@ -159,12 +224,12 @@ def start_detection_route():
         detection_params = {
             'model': "yamnet.tflite",
             'max_results': 5,
-            'score_threshold': float(settings.get('threshold', 0.5)),
+            'score_threshold': float(settings['global']['threshold']),
             'overlapping_factor': 0.8,
             'socketio': socketio,
-            'webhook_url': settings.get('webhooks', {}).get('webhook-mic'),
-            'delay': float(settings.get('delay', 1.0)),
-            'audio_source': settings.get('audio_source'),
+            'webhook_url': settings['microphone'].get('webhook_url') if settings['microphone'].get('enabled') else None,
+            'delay': float(settings['global']['delay']),
+            'audio_source': settings['microphone']['audio_source'],  # Utiliser l'audio_source depuis la section microphone
             'rtsp_url': None
         }
         
@@ -351,6 +416,51 @@ def run_tests():
             'success': False,
             'error': str(e)
         }), 500
+
+@app.route('/save_settings', methods=['POST'])
+def save_settings_route():
+    try:
+        settings = request.json
+        if not settings:
+            return jsonify({'error': 'Aucun paramètre fourni'}), 400
+            
+        success, message = save_settings(settings)
+        if success:
+            return jsonify({'message': message})
+        else:
+            return jsonify({'error': message}), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+def validate_settings(settings):
+    """Valide les paramètres avant la sauvegarde"""
+    required_fields = ['threshold', 'delay', 'audio_source']
+    
+    # Vérifier les champs requis
+    if not all(field in settings for field in required_fields):
+        return False
+        
+    # Valider les valeurs
+    try:
+        threshold = float(settings['threshold'])
+        delay = float(settings['delay'])
+        
+        if not (0 <= threshold <= 1):
+            return False
+        if delay < 0:
+            return False
+            
+        # Valider l'URL du webhook si présente
+        if settings.get('microphone', {}).get('webhook_url'):
+            url = settings['microphone']['webhook_url']
+            if not url.startswith(('http://', 'https://')):
+                return False
+                
+    except (ValueError, TypeError):
+        return False
+        
+    return True
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, port=16045)  # Modified to use socketio.run instead of app.run

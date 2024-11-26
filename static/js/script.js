@@ -1,25 +1,4 @@
-// Fonction pour exécuter les tests (déplacée en dehors du DOMContentLoaded)
-async function runTests() {
-    try {
-        const response = await fetch('/run_tests', {
-            method: 'POST'
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            showNotification('Tests exécutés avec succès', 'success');
-            console.log('Résultats des tests:', data);
-        } else {
-            showNotification(data.error || 'Erreur lors de l\'exécution des tests', 'error');
-        }
-    } catch (error) {
-        showNotification('Erreur lors de l\'exécution des tests', 'error');
-        console.error('Erreur:', error);
-    }
-}
-
-// Fonction pour afficher les notifications (déplacée en dehors du DOMContentLoaded)
+// Ajouter cette fonction au début du fichier, avant le DOMContentLoaded
 function showNotification(message, type = 'success') {
     const notification = document.getElementById('notification');
     notification.textContent = message;
@@ -40,6 +19,9 @@ function showNotification(message, type = 'success') {
         }, 300);
     }, 3000);
 }
+
+// Ajouter au début du fichier
+let clapTimeout = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     // Éléments de l'interface
@@ -92,27 +74,69 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Démarrer la détection
     startButton.addEventListener('click', async function() {
+        const selectedMicro = document.getElementById('micro_source').value;
+        const [deviceIndex, deviceName] = selectedMicro.split('|');
+
+        // Récupérer tous les paramètres actuels
+        const settings = {
+            global: {
+                threshold: document.getElementById('threshold').value,
+                delay: document.getElementById('delay').value,
+                chunk_duration: 0.5,
+                buffer_duration: 1.0
+            },
+            microphone: {
+                device_index: deviceIndex,
+                audio_source: deviceName,
+                webhook_url: document.getElementById('webhook-mic-url').value,
+                enabled: document.getElementById('webhook-mic-enabled').checked
+            },
+            rtsp_sources: [],
+            vban: {
+                stream_name: "",
+                ip: "0.0.0.0",
+                port: 6980,
+                webhook_url: "",
+                enabled: false
+            }
+        };
+
         try {
-            const settings = getSettings();
-            const response = await fetch('/start_detection', {
+            // Sauvegarder les paramètres avant de démarrer la détection
+            const saveResponse = await fetch('/save_settings', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(settings)
             });
 
-            const data = await response.json();
-            
-            if (response.ok) {
-                showNotification('Détection démarrée avec succès');
-                startButton.style.display = 'none';
-                stopButton.style.display = 'inline-flex';
-            } else {
-                showNotification(data.error || 'Erreur lors du démarrage de la détection', 'error');
+            if (!saveResponse.ok) {
+                const errorData = await saveResponse.json();
+                throw new Error(errorData.error || 'Erreur lors de la sauvegarde des paramètres');
             }
+
+            // Si la sauvegarde réussit, démarrer la détection
+            const startResponse = await fetch('/start_detection', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(settings)
+            });
+
+            if (!startResponse.ok) {
+                const errorData = await startResponse.json();
+                throw new Error(errorData.error || 'Erreur lors du démarrage de la détection');
+            }
+
+            // Mettre à jour l'interface
+            this.style.display = 'none';
+            document.getElementById('stopButton').style.display = 'block';
+            showNotification('Détection démarrée avec succès', 'success');
+
         } catch (error) {
-            showNotification('Erreur de connexion au serveur', 'error');
+            showNotification(error.message, 'error');
             console.error('Erreur:', error);
         }
     });
@@ -219,11 +243,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Configuration Socket.IO
-    const socket = io.connect('http://' + document.domain + ':' + 16045);
+    // Configuration Socket.IO avec le port explicite
+    const socket = io.connect('http://' + document.domain + ':16045', {
+        transports: ['websocket', 'polling']
+    });
 
     socket.on('connect', () => {
         console.log('Connecté au serveur Socket.IO');
+        showNotification('Connecté au serveur', 'success');
     });
 
     socket.on('connect_error', (error) => {
@@ -231,27 +258,52 @@ document.addEventListener('DOMContentLoaded', function() {
         showNotification('Erreur de connexion au serveur', 'error');
     });
 
+    // Gestion des claps
     socket.on('clap', (data) => {
         console.log('Clap détecté:', data);
         const display = document.getElementById('detection_display');
-        display.innerHTML = '👏';
-        display.classList.add('clap');
-        
-        setTimeout(() => {
-            display.innerHTML = '';
-            display.classList.remove('clap');
-        }, 500);
+        if (display) {
+            // Afficher directement l'emoji dans la div
+            display.innerHTML = '👏';
+            display.classList.add('clap');
+            
+            // Retirer l'emoji et la classe après 500ms
+            setTimeout(() => {
+                display.innerHTML = '';
+                display.classList.remove('clap');
+            }, 500);
+        } else {
+            console.error('Element detection_display non trouvé');
+        }
     });
 
+    // Gestion des labels
     socket.on('labels', (data) => {
         console.log('Labels reçus:', data);
         const labelsDiv = document.getElementById('detected_labels');
-        labelsDiv.innerHTML = '';
+        if (!labelsDiv) {
+            console.error('Element detected_labels non trouvé');
+            return;
+        }
+
+        // S'assurer que le conteneur est visible
+        labelsDiv.style.display = 'block';
         
+        // Vérifier si data.detected existe et est un tableau
         if (data.detected && Array.isArray(data.detected)) {
-            data.detected.forEach(item => {
-                const labelElement = document.createElement('p');
-                labelElement.textContent = item.label;
+            // Vider le conteneur des labels précédents
+            labelsDiv.innerHTML = '';
+            
+            // Trier les labels par score et prendre les 5 premiers
+            const sortedLabels = [...data.detected]
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 5);
+            
+            // Créer un élément pour chaque label
+            sortedLabels.forEach(item => {
+                const labelElement = document.createElement('div');
+                labelElement.classList.add('label');
+                labelElement.textContent = `${item.label} (${Math.round(item.score * 100)}%)`;
                 labelsDiv.appendChild(labelElement);
             });
         }
@@ -272,4 +324,52 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Erreur lors de la vérification du statut:', error);
         });
+
+    // Ajouter un écouteur pour sauvegarder la sélection du micro quand elle change
+    document.getElementById('micro_source').addEventListener('change', async function() {
+        const [deviceIndex, deviceName] = this.value.split('|');
+        const settings = {
+            microphone: {
+                device_index: deviceIndex,
+                audio_source: deviceName
+            }
+        };
+        
+        try {
+            const response = await fetch('/save_settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(settings)
+            });
+
+            if (!response.ok) {
+                throw new Error('Erreur lors de la sauvegarde de la source audio');
+            }
+        } catch (error) {
+            console.error('Erreur lors de la sauvegarde de la source audio:', error);
+        }
+    });
+
+    // Modifier la fonction qui gère les événements WebSocket
+    socket.on('message', function(event) {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'clap_detected') {
+            // Afficher l'icône
+            const clapIcon = document.querySelector('.clap-icon');
+            clapIcon.classList.add('active');
+            
+            // Nettoyer le timeout précédent si existant
+            if (clapTimeout) {
+                clearTimeout(clapTimeout);
+            }
+            
+            // Masquer l'icône après 500ms
+            clapTimeout = setTimeout(() => {
+                clapIcon.classList.remove('active');
+            }, 500);
+        }
+    });
 });
