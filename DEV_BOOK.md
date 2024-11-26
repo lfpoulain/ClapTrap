@@ -47,6 +47,20 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
 
 2. Mise à jour de l'interface utilisateur
    - Ajouter de l'interface pour le webhook pour chaque source
+     * Section Microphones
+       + Ajouter un champ webhook global unique pour tous les micros [OK]
+       + Déplacer la liste de sélection des micro (Source Audio) à côté de Microphone au niveau de la section webhook
+       + Dans cette Source Audio, nafficher que les micro du systeme.
+       + Ajouter des radio buttons pour la sélection du micro actif
+       + Masquer les champs webhook pour les micros inactifs
+     * Section VBAN
+       + Ajouter un champ webhook pour chaque source VBAN
+       + Permettre l'ajout/suppression dynamique des sources
+       + Afficher le statut de connexion pour chaque source
+     * Section RTSP
+       + Ajouter un champ webhook pour chaque flux RTSP
+       + Permettre l'ajout/suppression des flux
+       + Afficher le statut de connexion pour chaque flux
    - Ajouter une validation basique du format URL
    - Ajouter une icône ou un bouton de test du webhook
    - Ajouter des tooltips explicatifs sur le format attendu
