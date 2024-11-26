@@ -486,3 +486,21 @@ footer a {
     border-radius: 15px;
     font-size: 14px;
 }
+
+.clap-emoji {
+    position: absolute;
+    font-size: 24px;
+    animation: fadeOut 1s ease-out;
+    z-index: 1000;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: scale(1.2);
+    }
+    to {
+        opacity: 0;
+        transform: scale(1);
+    }
+}

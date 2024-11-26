@@ -58,8 +58,8 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
        + Masquer les champs webhook pour les micros inactifs [OK]
      * Section VBAN
        + Ajouter une section VBAN qui liste les sources VBAN disponibles en train d'émettre.
-       + Ajouter un champ webhook pour chaque source VBAN
-       + Permettre l'ajout/suppression dynamique des sources
+       + Permettre l'ajout/suppression dynamique des sources VBAN qu'on veut garder
+       + Ajouter un champ webhook pour chaque source VBAN ajoutée
        + Afficher le statut de connexion pour chaque source
      * Section RTSP
        + Ajouter un champ webhook pour chaque flux RTSP

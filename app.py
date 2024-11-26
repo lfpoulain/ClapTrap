@@ -464,5 +464,14 @@ def validate_settings(settings):
         
     return True
 
+@socketio.on('clap_detected')
+def handle_clap(source_type, source_id):
+    print(f"Clap detected from {source_type} - {source_id}")  # Log pour debug
+    socketio.emit('clap_detected', {
+        'source_type': source_type,
+        'source_id': source_id,
+        'timestamp': time.time()
+    })
+
 if __name__ == '__main__':
     socketio.run(app, debug=True, port=16045)  # Modified to use socketio.run instead of app.run

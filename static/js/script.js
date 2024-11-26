@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const audioSource = document.getElementById('audio_source');
     const threshold = document.getElementById('threshold');
     const delay = document.getElementById('delay');
-    const refreshVbanButton = document.getElementById('refresh_vban');
+    const refreshVbanButton = document.getElementById('refreshVbanButton');
     const thresholdOutput = threshold.nextElementSibling;
 
     // Gestion des webhooks
@@ -177,37 +177,39 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Rafraîchir les sources VBAN
-    refreshVbanButton.addEventListener('click', async function() {
-        try {
-            refreshVbanButton.classList.add('refreshing');
-            const response = await fetch('/refresh_vban');
-            const data = await response.json();
-            
-            if (response.ok) {
-                // Mettre à jour la liste des sources
-                const currentSource = audioSource.value;
-                audioSource.innerHTML = ''; // Vider la liste actuelle
+    if (refreshVbanButton) {
+        refreshVbanButton.addEventListener('click', async function() {
+            try {
+                refreshVbanButton.classList.add('refreshing');
+                const response = await fetch('/refresh_vban');
+                const data = await response.json();
                 
-                // Recréer les options avec les nouvelles sources
-                data.sources.forEach(source => {
-                    const option = document.createElement('option');
-                    option.value = source.url || source.name;
-                    option.textContent = source.name;
-                    option.selected = source.url === currentSource || source.name === currentSource;
-                    audioSource.appendChild(option);
-                });
-                
-                showNotification('Sources VBAN mises à jour');
-            } else {
-                showNotification(data.error || 'Erreur lors de la mise à jour des sources VBAN', 'error');
+                if (response.ok) {
+                    // Mettre à jour la liste des sources
+                    const currentSource = audioSource.value;
+                    audioSource.innerHTML = ''; // Vider la liste actuelle
+                    
+                    // Recréer les options avec les nouvelles sources
+                    data.sources.forEach(source => {
+                        const option = document.createElement('option');
+                        option.value = source.url || source.name;
+                        option.textContent = source.name;
+                        option.selected = source.url === currentSource || source.name === currentSource;
+                        audioSource.appendChild(option);
+                    });
+                    
+                    showNotification('Sources VBAN mises à jour');
+                } else {
+                    showNotification(data.error || 'Erreur lors de la mise à jour des sources VBAN', 'error');
+                }
+            } catch (error) {
+                showNotification('Erreur de connexion au serveur', 'error');
+                console.error('Erreur:', error);
+            } finally {
+                refreshVbanButton.classList.remove('refreshing');
             }
-        } catch (error) {
-            showNotification('Erreur de connexion au serveur', 'error');
-            console.error('Erreur:', error);
-        } finally {
-            refreshVbanButton.classList.remove('refreshing');
-        }
-    });
+        });
+    }
 
     // Tester les webhooks
     testWebhookButtons.forEach(button => {
@@ -403,5 +405,27 @@ document.addEventListener('DOMContentLoaded', function() {
     // Ajouter un event listener pour les radio buttons
     document.querySelectorAll('.microphone-item input[type="radio"]').forEach(radio => {
         radio.addEventListener('change', updateSettings);
+    });
+
+    // Chercher la section qui gère les WebSocket
+    socket.on('clap_detected', function(data) {
+        console.log('Clap detected:', data); // Ajout de log pour debug
+        const sourceType = data.source_type;
+        const sourceId = data.source_id;
+        
+        // Trouver l'élément correspondant à la source
+        const sourceElement = document.querySelector(`[data-source-type="${sourceType}"][data-source-id="${sourceId}"]`);
+        if (sourceElement) {
+            // Ajouter l'émoji clap
+            const clapEmoji = document.createElement('span');
+            clapEmoji.textContent = '👏';
+            clapEmoji.classList.add('clap-emoji');
+            sourceElement.appendChild(clapEmoji);
+            
+            // Supprimer l'émoji après 1 seconde
+            setTimeout(() => {
+                clapEmoji.remove();
+            }, 1000);
+        }
     });
 });
