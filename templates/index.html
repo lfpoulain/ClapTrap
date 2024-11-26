@@ -16,6 +16,11 @@
 
     <div id="notification" class="notification" style="display: none;"></div>
 
+    <div class="notifications">
+        <div id="error" class="notification error" style="display: none;"></div>
+        <div id="success" class="notification success" style="display: none;"></div>
+    </div>
+
     <main class="dashboard">
         <!-- Panneau de visualisation -->
         <section class="visualization-panel">
@@ -180,7 +185,7 @@
     </script>
     
     <!-- Charger notre script principal -->
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/script.js') }}"></script>
 
     <template id="vbanDetectedSourceTemplate">
         <div class="list-group-item d-flex justify-content-between align-items-center">

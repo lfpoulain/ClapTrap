@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, send_from_directory
 from flask_socketio import SocketIO
 from classify import start_detection, stop_detection, is_running
 import sounddevice as sd
@@ -292,7 +292,7 @@ def verify_settings_saved(new_settings, saved_settings):
         print(f"Erreur lors de la vérification des paramètres: {str(e)}")
         return False
 
-@app.route('/start_detection', methods=['POST'])
+@app.route('/api/detection/start', methods=['POST'])
 def start_detection_route():
     try:
         settings = request.json
@@ -328,7 +328,7 @@ def start_detection_route():
         print(f"Erreur lors du démarrage de la détection: {str(e)}")
         return jsonify({'error': str(e)}), 400
 
-@app.route('/stop_detection', methods=['POST'])
+@app.route('/api/detection/stop', methods=['POST'])
 def stop_detection_route():
     try:
         # Arrêter la détection
@@ -753,6 +753,67 @@ def update_vban_source():
             'success': False,
             'error': str(e)
         }), 500
+
+@app.route('/static/js/modules/<path:filename>')
+def serve_js_module(filename):
+    return send_from_directory('static/js/modules', filename, mimetype='application/javascript')
+
+@app.route('/api/audio-sources', methods=['GET'])
+def get_audio_sources():
+    try:
+        devices = sd.query_devices()
+        audio_sources = [
+            {
+                'index': idx,
+                'name': device['name'],
+                'type': 'microphone'
+            }
+            for idx, device in enumerate(devices)
+            if device['max_input_channels'] > 0
+        ]
+        return jsonify(audio_sources)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/rtsp/streams', methods=['GET'])
+def get_rtsp_streams():
+    try:
+        settings = load_settings()
+        return jsonify(settings.get('rtsp_sources', []))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/vban/sources', methods=['GET'])
+def get_vban_sources():
+    try:
+        # Utiliser la fonction existante refresh_vban
+        return refresh_vban()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/vban/saved-sources', methods=['GET'])
+def get_saved_vban_sources():
+    try:
+        settings = load_settings()
+        return jsonify(settings.get('saved_vban_sources', []))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/settings/save', methods=['POST'])
+def save_settings_api():
+    try:
+        settings = request.json
+        if not settings:
+            return jsonify({'error': 'Aucun paramètre fourni'}), 400
+            
+        success, message = save_settings(settings)
+        if success:
+            return jsonify({'success': True, 'message': message})
+        else:
+            return jsonify({'error': message}), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, port=16045, allow_unsafe_werkzeug=True)
