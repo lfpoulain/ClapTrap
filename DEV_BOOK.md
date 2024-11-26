@@ -58,7 +58,7 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
        + Masquer les champs webhook pour les micros inactifs [OK]
      * Section VBAN
        + réalisation d'un proto utilisant pyVBAN pour lister les sources vban émettrices. [OK]
-       + Ajouter une section VBAN qui liste les sources VBAN disponibles en train d'émettre.
+       + Ajouter une section VBAN qui liste les sources VBAN disponibles en train d'émettre. [OK]
        + Permettre l'ajout/suppression dynamique des sources VBAN qu'on veut garder
        + Ajouter un champ webhook pour chaque source VBAN ajoutée
        + Afficher le statut de connexion pour chaque source
