@@ -711,3 +711,17 @@ footer a {
     margin-bottom: 1rem;
     padding-left: 0.5rem;
 }
+
+/* Styles pour la validation des URLs */
+.webhook-input-group input[type="url"].invalid {
+    border-color: var(--danger-color);
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+.webhook-input-group input[type="url"].invalid:focus {
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.webhook-input-group input[type="url"] {
+    transition: all 0.3s ease;
+}

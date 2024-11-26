@@ -62,13 +62,13 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
        + Permettre l'ajout/suppression dynamique des sources VBAN qu'on veut garder
          * Modification du modèle de données [TODO]
            - Ajouter une section "saved_vban_sources" dans settings.json [OK]
-           - Stocker pour chaque source : nom, ip, port, webhook_url, stream_name, enabled
+           - Stocker pour chaque source : nom, ip, port, webhook_url, stream_name, enabled [OK]
          
          * Interface utilisateur [TODO]
-           - Afficher deux listes distinctes :
+           - Afficher deux listes distinctes : [OK]
              > Sources VBAN détectées (actuellement émettant)
              > Sources VBAN sauvegardées (configuration permanente)
-           - Ajouter un bouton "+" à côté de chaque source détectée
+           - Ajouter un bouton "+" à côté de chaque source détectée [OK]
            - Ajouter un bouton "-" à côté de chaque source sauvegardée
            - Ajouter un champ webhook_url pour chaque source sauvegardée
            - Ajouter un switch enabled/disabled pour chaque source sauvegardée

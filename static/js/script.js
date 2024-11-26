@@ -110,6 +110,39 @@ function displaySavedVBANSources(sources) {
             clone.querySelector('.webhook-url').value = source.webhook_url || '';
             clone.querySelector('.source-enabled').checked = source.enabled !== false;
             
+            // Gestion du webhook avec validation instantanée
+            const webhookInput = clone.querySelector('.webhook-url');
+            let typingTimer;
+            
+            webhookInput.addEventListener('input', (e) => {
+                clearTimeout(typingTimer);
+                const url = e.target.value.trim();
+                
+                // Attendre que l'utilisateur arrête de taper pendant 500ms
+                typingTimer = setTimeout(() => {
+                    if (url === '') {
+                        // URL vide est acceptée (suppression du webhook)
+                        updateVBANSource(source, { webhook_url: '' });
+                    } else if (isValidUrl(url)) {
+                        // URL valide
+                        webhookInput.classList.remove('invalid');
+                        updateVBANSource(source, { webhook_url: url });
+                    } else {
+                        // URL invalide
+                        webhookInput.classList.add('invalid');
+                        showError('URL invalide');
+                    }
+                }, 500);
+            });
+            
+            // Ajouter aussi la validation pour les autres champs webhook
+            const enabledSwitch = clone.querySelector('.source-enabled');
+            enabledSwitch.addEventListener('change', () => {
+                updateVBANSource(source, {
+                    enabled: enabledSwitch.checked
+                });
+            });
+            
             const removeButton = clone.querySelector('.remove-vban-btn');
             removeButton.addEventListener('click', () => removeVBANSource(source));
             
@@ -153,6 +186,72 @@ function initializeApp() {
 
     // Configuration Socket.IO
     initializeSocketIO();
+
+    // Sauvegarde automatique des paramètres globaux
+    const thresholdInput = document.getElementById('threshold');
+    const delayInput = document.getElementById('delay');
+
+    if (thresholdInput) {
+        thresholdInput.addEventListener('change', () => {
+            updateGlobalSettings({
+                threshold: thresholdInput.value
+            });
+        });
+    }
+
+    if (delayInput) {
+        delayInput.addEventListener('change', () => {
+            updateGlobalSettings({
+                delay: delayInput.value
+            });
+        });
+    }
+
+    // Sauvegarde automatique des paramètres microphone
+    const microphoneSelect = document.getElementById('micro_source');
+    const micWebhookInput = document.getElementById('webhook-mic-url');
+    const micWebhookEnabled = document.getElementById('webhook-mic-enabled');
+
+    if (microphoneSelect) {
+        microphoneSelect.addEventListener('change', () => {
+            const [deviceIndex, deviceName] = microphoneSelect.value.split('|');
+            updateMicrophoneSettings({
+                device_index: deviceIndex,
+                audio_source: deviceName
+            });
+        });
+    }
+
+    if (micWebhookInput) {
+        let typingTimer;
+        
+        micWebhookInput.addEventListener('input', (e) => {
+            clearTimeout(typingTimer);
+            const url = e.target.value.trim();
+            
+            typingTimer = setTimeout(() => {
+                if (url === '') {
+                    updateMicrophoneSettings({ webhook_url: '' });
+                } else if (isValidUrl(url)) {
+                    micWebhookInput.classList.remove('invalid');
+                    updateMicrophoneSettings({ webhook_url: url });
+                } else {
+                    micWebhookInput.classList.add('invalid');
+                    showError('URL invalide');
+                }
+            }, 500);
+        });
+    }
+
+    if (micWebhookEnabled) {
+        micWebhookEnabled.addEventListener('change', () => {
+            updateMicrophoneSettings({
+                enabled: micWebhookEnabled.checked
+            });
+        });
+    }
+
+    initializeRTSPWebhooks();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -240,11 +339,44 @@ function initializeSocketIO() {
 
 // Modifier les références à settings dans le reste du code
 function updateVBANSource(source, updates) {
-    // ...
-    if (typeof window.settings !== 'undefined' && window.settings.saved_vban_sources) {
-        // ...
-    }
-    // ...
+    const updatedSource = { ...source, ...updates };
+    
+    fetch('/api/vban/update', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updatedSource)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || 'Erreur lors de la mise à jour de la source');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showNotification('Source VBAN mise à jour avec succès', 'success');
+            
+            // Mettre à jour les settings locaux
+            if (typeof window.settings !== 'undefined' && window.settings.saved_vban_sources) {
+                const index = window.settings.saved_vban_sources.findIndex(s => 
+                    s.ip === source.ip && s.stream_name === source.stream_name
+                );
+                if (index !== -1) {
+                    window.settings.saved_vban_sources[index] = updatedSource;
+                }
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showError(error.message);
+        // Recharger l'affichage pour revenir à l'état précédent
+        displaySavedVBANSources(window.settings.saved_vban_sources || []);
+    });
 }
 
 function addVBANSource(source) {
@@ -357,6 +489,153 @@ async function stopDetection() {
     } catch (error) {
         showNotification(error.message, 'error');
         console.error('Erreur:', error);
+    }
+}
+
+// Fonction pour mettre à jour les paramètres globaux
+function updateGlobalSettings(updates) {
+    if (typeof window.settings === 'undefined') {
+        window.settings = { global: {} };
+    }
+
+    const updatedSettings = {
+        ...window.settings,
+        global: {
+            ...window.settings.global,
+            ...updates
+        }
+    };
+
+    fetch('/save_settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updatedSettings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.settings = updatedSettings;
+            showNotification('Paramètres sauvegardés', 'success');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showError('Erreur lors de la sauvegarde des paramètres');
+    });
+}
+
+// Fonction pour mettre à jour les paramètres du microphone
+function updateMicrophoneSettings(updates) {
+    if (typeof window.settings === 'undefined') {
+        window.settings = { microphone: {} };
+    }
+
+    const updatedSettings = {
+        ...window.settings,
+        microphone: {
+            ...window.settings.microphone,
+            ...updates
+        }
+    };
+
+    fetch('/save_settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updatedSettings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.settings = updatedSettings;
+            showNotification('Paramètres microphone sauvegardés', 'success');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showError('Erreur lors de la sauvegarde des paramètres microphone');
+    });
+}
+
+function initializeRTSPWebhooks() {
+    document.querySelectorAll('[id^="webhook-rtsp-"]').forEach(input => {
+        if (input.type === 'url') {
+            let typingTimer;
+            
+            input.addEventListener('input', (e) => {
+                clearTimeout(typingTimer);
+                const url = e.target.value.trim();
+                const index = input.id.split('-')[2];
+                
+                typingTimer = setTimeout(() => {
+                    if (url === '') {
+                        updateRTSPSettings(index - 1, { webhook_url: '' });
+                    } else if (isValidUrl(url)) {
+                        input.classList.remove('invalid');
+                        updateRTSPSettings(index - 1, { webhook_url: url });
+                    } else {
+                        input.classList.add('invalid');
+                        showError('URL invalide');
+                    }
+                }, 500);
+            });
+        } else if (input.type === 'checkbox') {
+            input.addEventListener('change', () => {
+                const index = input.id.split('-')[2];
+                updateRTSPSettings(index - 1, {
+                    enabled: input.checked
+                });
+            });
+        }
+    });
+}
+
+function updateRTSPSettings(index, updates) {
+    if (typeof window.settings === 'undefined') {
+        window.settings = { rtsp_sources: [] };
+    }
+
+    if (!window.settings.rtsp_sources[index]) {
+        window.settings.rtsp_sources[index] = {};
+    }
+
+    const updatedSettings = {
+        ...window.settings,
+        rtsp_sources: window.settings.rtsp_sources.map((source, i) => 
+            i === index ? { ...source, ...updates } : source
+        )
+    };
+
+    fetch('/save_settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updatedSettings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.settings = updatedSettings;
+            showNotification('Paramètres RTSP sauvegardés', 'success');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showError('Erreur lors de la sauvegarde des paramètres RTSP');
+    });
+}
+
+// Fonction pour valider une URL
+function isValidUrl(string) {
+    try {
+        new URL(string);
+        return true;
+    } catch (_) {
+        return false;
     }
 }
 

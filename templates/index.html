@@ -40,8 +40,8 @@
                         <div class="setting-control">
                             <input type="range" id="threshold" name="threshold" 
                                    min="0" max="1" step="0.1" 
-                                   value="{{ settings.get('threshold', 0.5) }}">
-                            <output for="threshold">{{ settings.get('threshold', 0.5) }}</output>
+                                   value="{{ settings.global.threshold }}">
+                            <output for="threshold">{{ settings.global.threshold }}</output>
                         </div>
                     </div>
                     <div class="setting-item">
@@ -179,8 +179,8 @@
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     
     <!-- Initialiser les settings avant le script principal -->
-    <script>
-        window.settings = JSON.parse('{{ settings_json|tojson|safe }}');
+    <script type="text/javascript">
+        window.settings = JSON.parse('{{ settings_json|safe }}');
     </script>
     
     <!-- Charger notre script principal -->

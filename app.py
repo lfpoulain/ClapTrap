@@ -240,13 +240,15 @@ def index():
                 'name': device['name']
             })
     
-    # Passer settings en tant que variable JavaScript
+    # Échapper correctement le JSON pour JavaScript
+    settings_json = json.dumps(settings).replace("'", "\\'").replace('"', '\\"')
+    
     return render_template('index.html', 
                          settings=settings, 
                          devices=input_devices, 
                          flux=flux['audio_streams'],
                          debug=app.debug,
-                         settings_json=json.dumps(settings))
+                         settings_json=settings_json)
 
 def verify_settings_saved(new_settings, saved_settings):
     """Vérifie que les paramètres ont été correctement sauvegardés"""
@@ -734,15 +736,17 @@ def update_vban_source():
                 'error': 'Source non trouvée'
             }), 404
             
-        # Sauvegarder les modifications
-        success, message = save_settings(settings)
-        
-        if success:
+        # Sauvegarder directement dans le fichier
+        try:
+            with open(SETTINGS_FILE, 'w') as f:
+                json.dump(settings, f, indent=4)
+            print(f"Settings sauvegardés avec succès: {settings}")  # Debug log
             return jsonify({'success': True})
-        else:
+        except Exception as e:
+            print(f"Erreur lors de l'écriture dans settings.json: {str(e)}")  # Debug log
             return jsonify({
                 'success': False,
-                'error': message
+                'error': f"Erreur lors de la sauvegarde: {str(e)}"
             }), 500
             
     except Exception as e:
