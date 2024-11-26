@@ -105,27 +105,22 @@
 
                     <!-- Webhook VBAN -->
                     <div class="webhook-card">
-                        <div class="webhook-header">
+                        <div class="card-header">
                             <h4>
-                                <span class="webhook-icon">📹</span>
+                                <span class="webhook-icon">🎵</span>
                                 Sources VBAN
                             </h4>
+                            <button id="refreshVBAN" class="refresh-btn">
+                                <img src="{{ url_for('static', filename='img/refresh.svg') }}" alt="Rafraîchir">
+                            </button>
                         </div>
                         <div class="webhook-content">
-                            <div id="vban-sources-container">
-                                <div class="vban-header-container">
-                                    <div class="vban-header">
-                                        <span>Sources VBAN détectées</span>
-                                        <button type="button" id="refreshVbanButton" class="btn btn-secondary">
-                                            <i class="fas fa-sync"></i> Rafraîchir les sources VBAN
-                                        </button>
-                                    </div>
-                                    <div id="vban-status" class="badge bg-secondary">En attente...</div>
-                                </div>
-                                <div id="vban-sources-list" class="list-group mb-3">
-                                    <!-- Les sources VBAN seront ajoutées ici dynamiquement -->
-                                </div>
+                            <div id="vbanSourcesList" class="vban-sources-list">
+                                <p class="no-sources">Chargement des sources VBAN...</p>
                             </div>
+                            <select id="vbanSourceSelect" class="vban-select" style="display: none;">
+                                <!-- Les sources seront ajoutées ici dynamiquement -->
+                            </select>
                         </div>
                     </div>
 

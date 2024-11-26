@@ -10,9 +10,11 @@ import time
 import os
 from datetime import datetime
 from events import socketio  # Importation de l'instance Socket.IO
+from vban_discovery import VBANDiscovery
 
 app = Flask(__name__)
-socketio.init_app(app)  # Initialisation de Socket.IO avec l'app Flask
+app.config['SECRET_KEY'] = 'votre_clé_secrète_ici'
+socketio.init_app(app, cors_allowed_origins="*")
 
 # Définir le chemin absolu du dossier de l'application
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -285,11 +287,36 @@ def test_webhook():
 @app.route('/refresh_vban')
 def refresh_vban():
     try:
-        # Votre logique de rafraîchissement VBAN ici
-        # Retourner la nouvelle liste des sources
-        sources = get_vban_sources()  # Fonction à implémenter
-        return jsonify({'sources': sources})
+        print("Démarrage de la découverte VBAN...")  # Debug log
+        discovery = VBANDiscovery()
+        discovery.start()
+        
+        # Attendre un peu plus longtemps pour la découverte
+        time.sleep(3)
+        
+        # Récupérer les sources
+        sources = discovery.get_active_sources()
+        print(f"Sources trouvées: {sources}")  # Debug log
+        
+        # Arrêter la découverte
+        discovery.stop()
+        
+        # Formater les sources pour l'interface
+        formatted_sources = []
+        for source in sources:
+            formatted_sources.append({
+                'name': source.stream_name,
+                'ip': source.ip,
+                'port': source.port,
+                'channels': source.channels,
+                'sample_rate': source.sample_rate,
+                'id': f"vban_{source.ip}_{source.port}"
+            })
+        
+        print(f"Sources formatées: {formatted_sources}")  # Debug log
+        return jsonify({'sources': formatted_sources})
     except Exception as e:
+        print(f"Erreur lors de la découverte VBAN: {str(e)}")  # Debug log
         return jsonify({'error': str(e)}), 400
 
 @app.route('/clap_detected')  # Added route for clap detection
@@ -474,4 +501,4 @@ def handle_clap(source_type, source_id):
     })
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, port=16045)  # Modified to use socketio.run instead of app.run
+    socketio.run(app, debug=True, port=16045, allow_unsafe_werkzeug=True)

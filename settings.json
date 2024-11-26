@@ -1,7 +1,7 @@
 {
     "global": {
-        "threshold": "0.2",
-        "delay": "0.6",
+        "threshold": "0.5",
+        "delay": "1.0",
         "chunk_duration": 0.5,
         "buffer_duration": 1
     },
