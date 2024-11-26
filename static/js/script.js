@@ -253,19 +253,28 @@ function initializeApp() {
 
     initializeRTSPWebhooks();
 
-    // Chercher le curseur de précision et son affichage
+    // Trouve le curseur de précision et son affichage
     const thresholdSlider = document.getElementById('threshold');
     const thresholdValue = document.getElementById('threshold-value');
 
-    // Ajouter un event listener pour mettre à jour l'affichage en temps réel
+    // Met à jour l'affichage quand le curseur bouge
     thresholdSlider.addEventListener('input', function() {
         thresholdValue.textContent = this.value;
     });
 
-    // Mettre à jour l'affichage initial
-    if (thresholdSlider && thresholdValue) {
-        thresholdValue.textContent = thresholdSlider.value;
-    }
+    // Sauvegarde la valeur quand le curseur est relâché
+    thresholdSlider.addEventListener('change', function() {
+        fetch('/update_settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                path: ['global', 'threshold'],
+                value: parseFloat(this.value)
+            })
+        });
+    });
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -318,7 +327,6 @@ function initializeSocketIO() {
             }, 1000);
         }
     });
-
     // Gestion des labels
     socket.on('labels', (data) => {
         console.log('Labels reçus:', data);
@@ -654,3 +662,4 @@ function isValidUrl(string) {
 }
 
 // ... reste du code ...
+

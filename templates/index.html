@@ -37,12 +37,8 @@
                 <div class="settings-grid">
                     <div class="setting-item">
                         <label for="threshold">Précision</label>
-                        <div class="setting-control">
-                            <input type="range" id="threshold" name="threshold" 
-                                   min="0" max="1" step="0.1" 
-                                   value="{{ settings.get('threshold', 0.5) }}">
-                            <output for="threshold">{{ settings.get('threshold', 0.5) }}</output>
-                        </div>
+                        <input type="range" id="threshold" min="0" max="1" step="0.1" value="{{ settings['global']['threshold'] }}">
+                        <span id="threshold-value">{{ settings['global']['threshold'] }}</span>
                     </div>
                     <div class="setting-item">
                         <label for="delay">Délai entre détections</label>
