@@ -11,8 +11,6 @@ import os
 from datetime import datetime
 from events import socketio  # Importation de l'instance Socket.IO
 from vban_discovery import VBANDiscovery
-import tempfile
-import shutil
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'votre_clé_secrète_ici'
@@ -528,39 +526,20 @@ def run_tests():
         }), 500
 
 @app.route('/save_settings', methods=['POST'])
-def save_settings():
+def save_settings_route():
     try:
-        # Récupérer les nouveaux paramètres
-        new_settings = request.json
-        
-        # Chemin absolu vers le fichier settings.json
-        settings_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'settings.json')
-        
-        # Créer un fichier temporaire dans le même dossier que settings.json
-        temp_dir = os.path.dirname(settings_path)
-        fd, temp_path = tempfile.mkstemp(dir=temp_dir, suffix='.tmp')
-        
-        try:
-            # Écrire les nouveaux paramètres dans le fichier temporaire
-            with os.fdopen(fd, 'w') as temp_file:
-                json.dump(new_settings, temp_file, indent=4)
+        settings = request.json
+        if not settings:
+            return jsonify({'error': 'Aucun paramètre fourni'}), 400
             
-            # Remplacer l'ancien fichier par le nouveau de manière atomique
-            shutil.move(temp_path, settings_path)
-            
-            return jsonify({"success": True})
-            
-        except Exception as e:
-            # En cas d'erreur, on s'assure de nettoyer le fichier temporaire
-            if os.path.exists(temp_path):
-                os.unlink(temp_path)
-            raise e
+        success, message = save_settings(settings)
+        if success:
+            return jsonify({'message': message})
+        else:
+            return jsonify({'error': message}), 400
             
     except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": f"Erreur lors de la sauvegarde des paramètres: {str(e)}"
-        }), 500
+        return jsonify({'error': str(e)}), 400
 
 def validate_settings(settings):
     """Valide les paramètres avant la sauvegarde"""

@@ -643,7 +643,6 @@ function updateRTSPSettings(index, updates) {
         showError('Erreur lors de la sauvegarde des paramètres RTSP');
     });
 }
-
 // Fonction pour valider une URL
 function isValidUrl(string) {
     try {
@@ -653,6 +652,4 @@ function isValidUrl(string) {
         return false;
     }
 }
-
-// ... reste du code ...
 
