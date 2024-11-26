@@ -264,15 +264,8 @@ function initializeApp() {
 
     // Sauvegarde la valeur quand le curseur est relâché
     thresholdSlider.addEventListener('change', function() {
-        fetch('/update_settings', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                path: ['global', 'threshold'],
-                value: parseFloat(this.value)
-            })
+        updateGlobalSettings({
+            threshold: this.value
         });
     });
 }
