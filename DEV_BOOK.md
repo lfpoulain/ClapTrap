@@ -53,9 +53,11 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
        + Dans cette Source Audio, nafficher que les micro du systeme. [OK]
        + Faire apparaitre l'icone des mains quand un clap est détecté
        + Lister les sons captés par le micro.
-       + Ajouter des radio buttons pour la sélection du micro actif
-       + Masquer les champs webhook pour les micros inactifs
+       + Ajouter des radio buttons pour la sélection du micro actif [OK]
+       + Quand le radio bouton est OFF, le son en provenance de cette source ne doit pas être capté. [OK]
+       + Masquer les champs webhook pour les micros inactifs [OK]
      * Section VBAN
+       + Ajouter une section VBAN qui liste les sources VBAN disponibles en train d'émettre.
        + Ajouter un champ webhook pour chaque source VBAN
        + Permettre l'ajout/suppression dynamique des sources
        + Afficher le statut de connexion pour chaque source

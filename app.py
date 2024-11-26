@@ -220,6 +220,10 @@ def start_detection_route():
         if not success:
             return jsonify({'error': message}), 400
             
+        # Vérifier si le microphone est activé
+        if not settings.get('microphone', {}).get('enabled', False):
+            print("Microphone désactivé - aucune capture audio ne sera effectuée")
+            
         # Préparer les paramètres pour start_detection
         detection_params = {
             'model': "yamnet.tflite",
@@ -229,14 +233,10 @@ def start_detection_route():
             'socketio': socketio,
             'webhook_url': settings['microphone'].get('webhook_url') if settings['microphone'].get('enabled') else None,
             'delay': float(settings['global']['delay']),
-            'audio_source': settings['microphone']['audio_source'],  # Utiliser l'audio_source depuis la section microphone
+            'audio_source': settings['microphone'].get('audio_source') if settings['microphone'].get('enabled') else None,
             'rtsp_url': None
         }
         
-        # Si la source est RTSP, ajouter l'URL RTSP
-        if detection_params['audio_source'].startswith('rtsp://'):
-            detection_params['rtsp_url'] = detection_params['audio_source']
-            
         # Démarrer la détection
         if start_detection(**detection_params):
             return jsonify({'success': True})
@@ -252,6 +252,8 @@ def stop_detection_route():
     try:
         # Arrêter la détection
         if stop_detection():
+            # Émettre un événement de statut avant d'arrêter
+            socketio.emit('detection_status', {'status': 'stopped'})
             return jsonify({'success': True})
         else:
             return jsonify({'error': 'Impossible d\'arrêter la détection'}), 400

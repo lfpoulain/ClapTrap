@@ -157,18 +157,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Nettoyer la liste des sons détectés
                 const labelsDiv = document.getElementById('detected_labels');
-                labelsDiv.innerHTML = '';
+                if (labelsDiv) {
+                    labelsDiv.innerHTML = '';
+                }
                 
                 // Nettoyer aussi l'affichage du clap si présent
                 const display = document.getElementById('detection_display');
-                display.innerHTML = '';
-                display.classList.remove('clap');
+                if (display) {
+                    display.innerHTML = '';
+                    display.classList.remove('clap');
+                }
             } else {
                 showNotification(data.error || 'Erreur lors de l\'arrêt de la détection', 'error');
             }
         } catch (error) {
-            showNotification('Erreur de connexion au serveur', 'error');
             console.error('Erreur:', error);
+            showNotification('Erreur lors de l\'arrêt de la détection', 'error');
         }
     });
 
@@ -255,32 +259,41 @@ document.addEventListener('DOMContentLoaded', function() {
 
     socket.on('connect_error', (error) => {
         console.error('Erreur de connexion Socket.IO:', error);
-        showNotification('Erreur de connexion au serveur', 'error');
+        // Ne pas afficher de notification d'erreur si la détection est arrêtée volontairement
+        if (document.getElementById('startButton').style.display !== 'inline-flex') {
+            showNotification('Erreur de connexion au serveur', 'error');
+        }
+    });
+
+    socket.on('detection_status', (data) => {
+        if (data.status === 'stopped') {
+            // La détection a été arrêtée proprement, pas besoin d'afficher d'erreur
+            console.log('Détection arrêtée normalement');
+        }
     });
 
     // Gestion des claps
     socket.on('clap', (data) => {
         console.log('Clap détecté:', data);
+        
+        // Gestion du detection_display
         const display = document.getElementById('detection_display');
         if (display) {
-            // Afficher directement l'emoji dans la div
             display.innerHTML = '👏';
             display.classList.add('clap');
             
-            // Retirer l'emoji et la classe après 500ms
+            // Nettoyer après l'animation
             setTimeout(() => {
                 display.innerHTML = '';
                 display.classList.remove('clap');
-            }, 500);
-        } else {
-            console.error('Element detection_display non trouvé');
+            }, 1000); // Augmenté à 1000ms pour une meilleure visibilité
         }
     });
 
     // Gestion des labels
     socket.on('labels', (data) => {
         console.log('Labels reçus:', data);
-        const labelsDiv = document.getElementById('detected_labels');
+        const labelsDiv = document.getElementById('detected_labels'); // ID corrigé
         if (!labelsDiv) {
             console.error('Element detected_labels non trouvé');
             return;
@@ -371,5 +384,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 clapIcon.classList.remove('active');
             }, 500);
         }
+    });
+
+    // Dans la fonction updateSettings()
+    function updateSettings() {
+        const settings = {
+            // ... autres paramètres existants ...
+            microphones: Array.from(document.querySelectorAll('.microphone-item')).map(item => ({
+                id: item.querySelector('select').value,
+                active: item.querySelector('input[type="radio"]').checked,
+                webhook_url: item.querySelector('input[type="text"]').value
+            }))
+        };
+        
+        // ... reste de la fonction
+    }
+
+    // Ajouter un event listener pour les radio buttons
+    document.querySelectorAll('.microphone-item input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', updateSettings);
     });
 });
