@@ -1,6 +1,6 @@
 {
     "global": {
-        "threshold": "0",
+        "threshold": "0.1",
         "delay": "1.0"
     },
     "microphone": {
