@@ -1032,6 +1032,65 @@ def update_rtsp_enabled():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/rtsp/sources', methods=['GET'])
+def get_rtsp_sources():
+    """Récupère la liste des sources RTSP"""
+    settings = load_settings()
+    return jsonify(settings.get('rtsp_sources', []))
+
+@app.route('/api/rtsp/sources', methods=['POST'])
+def add_rtsp_source():
+    """Ajoute une nouvelle source RTSP"""
+    settings = load_settings()
+    source = request.json
+    
+    # Vérifier si la source existe déjà
+    for existing in settings.get('rtsp_sources', []):
+        if existing['name'] == source['name']:
+            return jsonify({'error': 'Une source avec ce nom existe déjà'}), 400
+    
+    # Ajouter la nouvelle source
+    if 'rtsp_sources' not in settings:
+        settings['rtsp_sources'] = []
+    settings['rtsp_sources'].append(source)
+    
+    success, message = save_settings(settings)
+    if success:
+        return jsonify({'success': True})
+    return jsonify({'error': message}), 500
+
+@app.route('/api/rtsp/sources', methods=['PUT'])
+def update_rtsp_source():
+    """Met à jour une source RTSP existante"""
+    settings = load_settings()
+    source_update = request.json
+    
+    # Trouver et mettre à jour la source
+    for source in settings.get('rtsp_sources', []):
+        if source['name'] == source_update['name']:
+            source.update(source_update)
+            success, message = save_settings(settings)
+            if success:
+                return jsonify({'success': True})
+            return jsonify({'error': message}), 500
+    
+    return jsonify({'error': 'Source non trouvée'}), 404
+
+@app.route('/api/rtsp/sources', methods=['DELETE'])
+def delete_rtsp_source():
+    """Supprime une source RTSP"""
+    settings = load_settings()
+    source = request.json
+    
+    # Filtrer la source à supprimer
+    settings['rtsp_sources'] = [s for s in settings.get('rtsp_sources', []) 
+                              if s['name'] != source['name']]
+    
+    success, message = save_settings(settings)
+    if success:
+        return jsonify({'success': True})
+    return jsonify({'error': message}), 500
+
 if __name__ == '__main__':
     try:
         # Désactiver le mode debug

@@ -4,10 +4,9 @@
         "delay": "1.0"
     },
     "microphone": {
-        "device_index": "0",
-        "audio_source": "default",
-        "webhook_url": "",
-        "enabled": false
+        "enabled": true,
+        "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
+        "audio_source": "Microphone de \u00ab\u00a0iPhone\u00a0\u00bb"
     },
     "rtsp_sources": [],
     "vban": {
