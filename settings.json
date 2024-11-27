@@ -4,7 +4,7 @@
         "delay": "1.0"
     },
     "microphone": {
-        "device_index": "0",
+        "device_index": 0,
         "audio_source": "Microphone iMac",
         "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
         "enabled": true

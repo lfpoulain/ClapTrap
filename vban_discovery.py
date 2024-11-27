@@ -141,23 +141,16 @@ class VBANDiscovery:
             print(f"Paquet invalide reçu, magic bytes: {data[:4]}")
         return is_valid
         
-    def _parse_vban_packet(self, data: bytes, addr: tuple) -> Optional[VBANSource]:
+    def _parse_vban_packet(self, data: bytes, addr: tuple, logged_sources: set = None) -> Optional[VBANSource]:
         """Parse un paquet VBAN et extrait les informations de la source"""
         try:
-            # Format du header VBAN (28 bytes)
-            # - 'VBAN' (4 bytes)
-            # - Protocol version & sample format (1 byte)
-            # - Num samples per frame (1 byte)
-            # - Num channels (1 byte)
-            # - Sample rate index (1 byte)
-            # - Stream name (16 bytes)
-            # - Frame counter (4 bytes)
-            
             stream_name = data[8:24].decode('ascii').rstrip('\x00')
             sample_rate = self._decode_sample_rate(data[7])
             channels = data[6] + 1
             
-            print(f"Paquet VBAN parsé: {stream_name}, {channels} canaux @ {sample_rate}Hz")
+            source_key = f"{addr[0]}:{addr[1]}"
+            if logged_sources is None or source_key not in logged_sources:
+                print(f"Paquet VBAN parsé: {stream_name}, {channels} canaux @ {sample_rate}Hz")
             
             return VBANSource(
                 ip=addr[0],

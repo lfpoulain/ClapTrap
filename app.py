@@ -396,7 +396,7 @@ def stop_detection_route():
     try:
         # Arrêter la détection
         if stop_detection():
-            # Émettre un événement de statut avant d'arrêter
+            # Émettre un événement de statut avant d'arr��ter
             socketio.emit('detection_status', {'status': 'stopped'})
             return jsonify({'success': True})
         else:
@@ -450,7 +450,7 @@ def refresh_vban():
         print(f"Sources formatées: {formatted_sources}")  # Debug log
         return jsonify({'sources': formatted_sources})
     except Exception as e:
-        print(f"Erreur lors de la récupération des sources VBAN: {str(e)}")  # Debug log
+        print(f"Erreur lors de la r��cupération des sources VBAN: {str(e)}")  # Debug log
         return jsonify({'error': str(e)}), 400
 
 @app.route('/clap_detected')  # Added route for clap detection
@@ -641,7 +641,7 @@ def save_vban_source():
         print(f"Réception demande d'ajout source VBAN: {source}")  # Debug log
         
         # Valider les données requises
-        required_fields = ['name', 'ip', 'port', 'stream_name']
+        required_fields = ['name', 'ip', 'port']
         if not all(field in source for field in required_fields):
             print(f"Champs manquants. Reçu: {source}")  # Debug log
             return jsonify({
@@ -659,7 +659,7 @@ def save_vban_source():
         # Vérifier si la source existe déjà
         existing_source = next(
             (s for s in settings['saved_vban_sources'] 
-             if s['ip'] == source['ip'] and s['stream_name'] == source['stream_name']),
+             if s['ip'] == source['ip'] and s['name'] == source['name']),
             None
         )
         
@@ -675,7 +675,7 @@ def save_vban_source():
             'name': source['name'],
             'ip': source['ip'],
             'port': source['port'],
-            'stream_name': source['stream_name'],
+            'stream_name': source['name'],  # Utiliser le nom comme stream_name
             'webhook_url': source.get('webhook_url', ''),
             'enabled': source.get('enabled', True)
         }
@@ -683,19 +683,19 @@ def save_vban_source():
         settings['saved_vban_sources'].append(new_source)
         
         # Sauvegarder immédiatement les paramètres
-        try:
-            with open(SETTINGS_FILE, 'w') as f:
-                json.dump(settings, f, indent=4)
+        success, message = save_settings(settings)
+        
+        if success:
             print(f"Source VBAN sauvegardée avec succès: {new_source}")  # Debug log
             return jsonify({
                 'success': True,
                 'source': new_source
             })
-        except Exception as e:
-            print(f"Erreur lors de l'écriture dans settings.json: {str(e)}")  # Debug log
+        else:
+            print(f"Erreur lors de la sauvegarde des paramètres: {message}")  # Debug log
             return jsonify({
                 'success': False,
-                'error': f"Erreur lors de la sauvegarde: {str(e)}"
+                'error': f"Erreur lors de la sauvegarde: {message}"
             }), 500
             
     except Exception as e:
@@ -848,17 +848,20 @@ def get_vban_sources():
         # Effectuer un scan rapide
         start_time = time.time()
         active_sources = []
+        logged_sources = set()  # Pour suivre les sources déjà loggées
         
         try:
             while time.time() - start_time < 1.0:  # Scan pendant 1 seconde
                 try:
                     data, addr = vban_discovery._sock.recvfrom(2048)
                     if len(data) >= 4 and data[:4] == b'VBAN':
-                        source = vban_discovery._parse_vban_packet(data, addr)
+                        source = vban_discovery._parse_vban_packet(data, addr, logged_sources)
                         if source:
+                            source_key = f"{source.ip}:{source.port}"
                             # Éviter les doublons
                             if not any(s.ip == source.ip and s.port == source.port for s in active_sources):
                                 active_sources.append(source)
+                                logged_sources.add(source_key)
                 except socket.timeout:
                     continue
                     
