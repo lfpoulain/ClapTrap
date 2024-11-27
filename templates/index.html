@@ -133,19 +133,34 @@
                     </div>
 
                     <!-- Webhooks RTSP -->
+                    {% for stream in flux %}
                     <div class="webhook-card">
-                        <div class="card-header">
+                        <div class="webhook-header">
                             <h4>
                                 <span class="webhook-icon">📹</span>
-                                Flux RTSP
+                                {{ stream.name }}
                             </h4>
+                            <label class="switch" title="Activer/Désactiver le webhook">
+                                <input type="checkbox" id="webhook-rtsp-{{ loop.index }}-enabled" 
+                                       {% if stream.webhook_url %}checked{% endif %}>
+                                <span class="slider round"></span>
+                            </label>
                         </div>
-                        <div class="webhook-content">
-                            <div id="rtspStreamsContainer">
-                                <!-- Le contenu sera généré dynamiquement par rtspSources.js -->
+                        <div class="webhook-content" {% if not stream.webhook_url %}style="display: none;"{% endif %}>
+                            <div class="webhook-input-group">
+                                <input type="url" id="webhook-rtsp-{{ loop.index }}-url" 
+                                       class="webhook-input" 
+                                       value="{{ stream.webhook_url }}"
+                                       placeholder="https://votre-serveur.com/webhook"
+                                       aria-label="URL du webhook pour {{ stream.name }}">
+                                <button type="button" class="test-webhook" data-source="rtsp-{{ loop.index }}">
+                                    <span class="icon">🔔</span>
+                                    Tester
+                                </button>
                             </div>
                         </div>
                     </div>
+                    {% endfor %}
                 </div>
             </div>
         </section>
@@ -171,35 +186,67 @@
     <script type="module" src="{{ url_for('static', filename='js/script.js') }}"></script>
 
     <template id="vbanDetectedSourceTemplate">
-        <div class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-                <strong class="source-name"></strong>
-                <small class="text-muted d-block">IP: <span class="source-ip"></span> - Port: <span class="source-port"></span></small>
+        <div class="webhook-card mb-3">
+            <div class="webhook-header">
+                <h4>
+                    <span class="webhook-icon">🎵</span>
+                    <span class="source-name"></span>
+                </h4>
+                <div class="webhook-actions">
+                    <button class="btn btn-sm btn-success add-vban-btn">
+                        <span>➕</span> Ajouter
+                    </button>
+                </div>
             </div>
-            <button class="btn btn-sm btn-success add-vban-btn">
-                <i class="fas fa-plus"></i> Ajouter
-            </button>
+            <div class="webhook-content">
+                <div class="webhook-input-group mb-3">
+                    <label class="form-label">Adresse IP</label>
+                    <div class="info-text source-ip"></div>
+                </div>
+                <div class="webhook-input-group mb-3">
+                    <label class="form-label">Port</label>
+                    <div class="info-text source-port"></div>
+                </div>
+            </div>
         </div>
     </template>
 
     <template id="vbanSavedSourceTemplate">
-        <div class="list-group-item">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <strong class="source-name"></strong>
-                    <small class="text-muted d-block">IP: <span class="source-ip"></span> - Port: <span class="source-port"></span></small>
-                </div>
-                <button class="btn btn-sm btn-danger remove-vban-btn">
-                    <span>🗑️</span>
-                </button>
+        <div class="webhook-card mb-3">
+            <div class="webhook-header">
+                <h4>
+                    <span class="webhook-icon">🎵</span>
+                    <span class="source-name"></span>
+                </h4>
+                <label class="switch" title="Activer/Désactiver la source">
+                    <input type="checkbox" class="source-enabled">
+                    <span class="slider round"></span>
+                </label>
             </div>
-            <div class="webhook-section mt-2">
-                <div class="webhook-input-group d-flex align-items-center gap-2">
-                    <input type="url" class="webhook-url form-control" placeholder="URL du webhook">
-                    <label class="switch" title="Activer/Désactiver la source">
-                        <input type="checkbox" class="source-enabled">
-                        <span class="slider round"></span>
-                    </label>
+            <div class="webhook-content">
+                <div class="webhook-input-group mb-3">
+                    <label class="form-label">Adresse IP</label>
+                    <div class="info-text source-ip"></div>
+                </div>
+                <div class="webhook-input-group mb-3">
+                    <label class="form-label">Port</label>
+                    <div class="info-text source-port"></div>
+                </div>
+                <div class="webhook-input-group">
+                    <label class="form-label">URL Webhook</label>
+                    <div class="webhook-input-with-test">
+                        <input type="url" class="webhook-input webhook-url" 
+                               placeholder="https://votre-serveur.com/webhook">
+                        <button type="button" class="test-webhook">
+                            <span class="icon">🔔</span>
+                            Tester
+                        </button>
+                    </div>
+                </div>
+                <div class="webhook-actions mt-3">
+                    <button class="btn btn-sm btn-danger remove-vban-btn">
+                        <span>🗑️</span> Supprimer
+                    </button>
                 </div>
             </div>
         </div>

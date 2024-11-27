@@ -2,9 +2,16 @@
 
 :root {
     --primary-color: #007bff;
-    --secondary-color: #6c757d;
-    --success-color: #28a745;
+    --primary-color-dark: #0056b3;
     --danger-color: #dc3545;
+    --danger-color-dark: #bd2130;
+    --success-color: #28a745;
+    --success-color-dark: #1e7e34;
+    --disabled-bg: #e9ecef;
+    --card-bg: #ffffff;
+    --text-color: #212529;
+    --border-color: #ced4da;
+    --input-bg: #ffffff;
     --background-color: #f8f9fa;
     --border-radius: 8px;
     --card-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -173,12 +180,26 @@ select {
     margin-bottom: 15px;
 }
 
+.webhook-header h4 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    font-size: 1.1em;
+}
+
 .webhook-content {
     padding: 10px 0;
 }
 
 .webhook-input-group {
     margin-bottom: 15px;
+}
+
+.webhook-input-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-color);
 }
 
 .webhook-input {
@@ -189,6 +210,11 @@ select {
     background-color: var(--input-bg);
     color: var(--text-color);
     font-size: 14px;
+}
+
+.webhook-input[readonly] {
+    background-color: var(--disabled-bg);
+    cursor: not-allowed;
 }
 
 .webhook-input:focus {
@@ -210,24 +236,48 @@ select {
     display: flex;
     gap: 10px;
     justify-content: flex-end;
-    margin-top: 15px;
 }
 
-.test-webhook {
+.test-webhook,
+.btn {
     padding: 8px 12px;
-    background-color: var(--primary-color);
-    color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 5px;
+    font-size: 14px;
     white-space: nowrap;
 }
 
-.test-webhook:hover {
+.test-webhook,
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.test-webhook:hover,
+.btn-primary:hover {
     background-color: var(--primary-color-dark);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: var(--danger-color-dark);
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: var(--success-color-dark);
 }
 
 .webhook-icon {
@@ -235,52 +285,13 @@ select {
     font-size: 1.2em;
 }
 
-/* Styles pour le formulaire d'ajout */
-.webhook-form {
-    background-color: var(--card-bg);
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
-}
-
-.form-check {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 10px 0;
-}
-
-.form-check-input {
-    margin: 0;
-}
-
-/* Buttons */
-button {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: var(--border-radius);
-    background: var(--primary-color);
-    color: white;
-    cursor: pointer;
-    transition: all var(--transition-speed);
-    font-weight: 500;
-}
-
-button:hover {
-    filter: brightness(1.1);
-}
-
-.test-webhook {
-    background: var(--secondary-color);
-    white-space: nowrap;
-}
-
-/* Switch Toggle */
+/* Switch styles */
 .switch {
     position: relative;
     display: inline-block;
     width: 50px;
     height: 24px;
+    margin: 0;
 }
 
 .switch input {
@@ -296,9 +307,8 @@ button:hover {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #ccc;
-    transition: var(--transition-speed);
-    border-radius: 24px;
+    background-color: var(--disabled-bg);
+    transition: .4s;
 }
 
 .slider:before {
@@ -309,16 +319,27 @@ button:hover {
     left: 4px;
     bottom: 4px;
     background-color: white;
-    transition: var(--transition-speed);
-    border-radius: 50%;
+    transition: .4s;
 }
 
 input:checked + .slider {
     background-color: var(--primary-color);
 }
 
+input:focus + .slider {
+    box-shadow: 0 0 1px var(--primary-color);
+}
+
 input:checked + .slider:before {
     transform: translateX(26px);
+}
+
+.slider.round {
+    border-radius: 24px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
 }
 
 /* Footer */
@@ -842,4 +863,14 @@ footer a {
 
 .add-source-btn:hover {
     background-color: #45a049;
+}
+
+.info-text {
+    padding: 8px 12px;
+    background-color: var(--background-color);
+    border-radius: 4px;
+    color: var(--text-color);
+    font-size: 14px;
+    line-height: 1.5;
+    font-family: var(--font-mono);
 }
