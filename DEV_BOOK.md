@@ -66,7 +66,7 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
          
          * Interface utilisateur [TODO]
            - Afficher deux listes distinctes : [OK]
-             > Sources VBAN détectées (actuellement émettant)
+             > Sources VBAN détectées (actuellement émettant) [OK]
              > Sources VBAN sauvegardées (configuration permanente)
            - Ajouter un bouton "+" à côté de chaque source détectée [OK]
            - Ajouter un bouton "-" à côté de chaque source sauvegardée
@@ -74,10 +74,10 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
            - Ajouter un switch enabled/disabled pour chaque source sauvegardée
          
          * Backend [TODO]
-           - Créer une route POST /api/vban/save pour sauvegarder une nouvelle source
-           - Créer une route DELETE /api/vban/remove pour supprimer une source
-           - Créer une route PUT /api/vban/update pour mettre à jour les paramètres
-           - Implémenter la persistance dans settings.json
+           - Créer une route POST /api/vban/save pour sauvegarder une nouvelle source [OK]
+           - Créer une route DELETE /api/vban/remove pour supprimer une source [OK]
+           - Créer une route PUT /api/vban/update pour mettre à jour les paramètres [OK]
+           - Implémenter la persistance dans settings.json [OK]
            - Gérer la validation des données
          
          * Tests et validation [TODO]
@@ -93,8 +93,10 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
            - Documenter les nouvelles routes API
            - Ajouter des exemples d'utilisation
      * Section RTSP
-       + Ajouter un champ webhook pour chaque flux RTSP
-       + Permettre l'ajout/suppression des flux
+       + Ajouter un champ webhook pour chaque flux RTSP [OK]
+       + Permettre l'ajout/suppression des flux [OK]
+       + Ajouter un bouton "+" pour ajouter un flux RTSP [OK]
+       + Ajouter un bouton "-" pour supprimer un flux RTSP [OK]
        + Afficher le statut de connexion pour chaque flux
    - Ajouter une validation basique du format URL
    - Ajouter une icône ou un bouton de test du webhook

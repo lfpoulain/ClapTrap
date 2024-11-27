@@ -166,11 +166,44 @@ class Settings:
                 self.save()
                 break
 
-def save_settings(settings):
+def save_settings(new_settings):
+    """Sauvegarde les paramètres avec une gestion d'erreurs améliorée"""
     try:
+        # Charger les paramètres existants ou utiliser la structure par défaut
+        default_settings = {
+            "global": {
+                "threshold": "0.5",
+                "delay": "1.0"
+            },
+            "microphone": {
+                "device_index": "0",
+                "audio_source": "default",
+                "webhook_url": "",
+                "enabled": False
+            },
+            "rtsp_sources": [],
+            "saved_vban_sources": [],  # Ajout de la liste des sources VBAN sauvegardées
+            "vban": {
+                "stream_name": "",
+                "ip": "0.0.0.0",
+                "port": 6980,
+                "webhook_url": "",
+                "enabled": False
+            }
+        }
+
+        # Charger les paramètres existants s'ils existent
+        current_settings = default_settings.copy()
+        if os.path.exists(SETTINGS_FILE):
+            with open(SETTINGS_FILE, 'r') as f:
+                current_settings.update(json.load(f))
+
+        # Mettre à jour avec les nouveaux paramètres
+        current_settings.update(new_settings)
+
         # Sauvegarder dans un fichier temporaire d'abord
         with open(SETTINGS_TEMP, 'w') as f:
-            json.dump(settings, f, indent=4)
+            json.dump(current_settings, f, indent=4)
 
         # Faire une sauvegarde de l'ancien fichier si nécessaire
         if os.path.exists(SETTINGS_FILE):
@@ -178,42 +211,77 @@ def save_settings(settings):
 
         # Renommer le fichier temporaire
         os.replace(SETTINGS_TEMP, SETTINGS_FILE)
+
         return True, "Paramètres sauvegardés avec succès"
 
     except Exception as e:
         return False, f"Erreur lors de la sauvegarde des paramètres: {str(e)}"
 
+def load_flux():
+    try:
+        with open('flux.json', 'r') as f:
+            flux = json.load(f)
+            print("Flux chargés :", flux)  # Ajout d'un log pour le débogage
+            return flux
+    except FileNotFoundError:
+        return {"audio_streams": []}
+
+
 def load_settings():
+    """Charge les paramètres avec gestion d'erreurs améliorée"""
+    default_settings = {
+        "global": {
+            "threshold": "0.5",
+            "delay": "1.0"
+        },
+        "microphone": {
+            "device_index": "0",
+            "audio_source": "default",
+            "webhook_url": "",
+            "enabled": False
+        },
+        "rtsp_sources": [],
+        "vban": {
+            "stream_name": "",
+            "ip": "0.0.0.0",
+            "port": 6980,
+            "webhook_url": "",
+            "enabled": False
+        }
+    }
+    
     try:
         if os.path.exists(SETTINGS_FILE):
             with open(SETTINGS_FILE, 'r') as f:
-                return json.load(f)
-        else:
-            # Structure par défaut des paramètres
-            default_settings = {
-                'global': {
-                    'threshold': '0.3',
-                    'delay': '1.0'
-                },
-                'microphone': {
-                    'enabled': True,
-                    'webhook_url': '',
-                    'audio_source': ''
-                },
-                'rtsp_sources': [],
-                'saved_vban_sources': []
-            }
+                settings = json.load(f)
+                
+            # Fusionner avec les paramètres par défaut pour s'assurer que toutes les clés existent
+            merged_settings = default_settings.copy()
+            merged_settings.update(settings)
+            
+            # S'assurer que la section microphone contient audio_source
+            if 'audio_source' not in merged_settings['microphone']:
+                merged_settings['microphone']['audio_source'] = default_settings['microphone']['audio_source']
+                
+            # Sauvegarder les paramètres fusionnés
             with open(SETTINGS_FILE, 'w') as f:
-                json.dump(default_settings, f, indent=4)
-            return default_settings
+                json.dump(merged_settings, f, indent=4)
+                
+            return merged_settings
     except Exception as e:
         print(f"Erreur lors du chargement des paramètres: {str(e)}")
-        return None
+        
+    # En cas d'erreur ou si le fichier n'existe pas, créer avec les paramètres par défaut
+    with open(SETTINGS_FILE, 'w') as f:
+        json.dump(default_settings, f, indent=4)
+    
+    return default_settings
 
 @app.route('/')
 def index():
     settings = load_settings()  # Charge les paramètres depuis le fichier JSON
     all_devices = sd.query_devices()  # Obtient la liste de tous les périphériques audio
+    flux = load_flux()
     
     # Convertir les périphériques en dictionnaire avec index et nom
     input_devices = []
@@ -230,6 +298,7 @@ def index():
     return render_template('index.html', 
                          settings=settings, 
                          devices=input_devices, 
+                         flux=flux['audio_streams'],
                          debug=app.debug,
                          settings_json=settings_json)
 

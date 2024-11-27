@@ -1,10 +1,11 @@
 import { showNotification, showSuccess, showError } from './notifications.js';
 
-export function initializeSocketIO() {
-    const socket = io.connect('http://' + document.domain + ':16045', {
-        transports: ['websocket', 'polling']
-    });
+// Créer et exporter l'instance Socket.IO
+export const socket = io.connect('http://' + document.domain + ':16045', {
+    transports: ['websocket', 'polling']
+});
 
+export function initializeSocketIO() {
     socket.on('connect', () => {
         console.log('Connecté au serveur Socket.IO');
         showSuccess('Connecté au serveur');
@@ -71,6 +72,4 @@ export function initializeSocketIO() {
             });
         }
     });
-
-    return socket;
 } 

@@ -1,36 +1,21 @@
 {
     "global": {
-        "threshold": "0.5",
+        "threshold": "0.3",
         "delay": "1.0"
     },
     "microphone": {
         "enabled": true,
-        "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
-        "audio_source": "Microphone de \u00ab\u00a0iPhone\u00a0\u00bb"
+        "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvVx",
+        "audio_source": "Microphone iMac"
     },
-    "rtsp_sources": [
-        {
-            "name": "kikou",
-            "url": "http://kikooul.lol",
-            "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
-            "enabled": true
-        }
-    ],
     "saved_vban_sources": [
         {
             "name": "Talkie",
             "ip": "192.168.68.63",
             "port": 6980,
             "stream_name": "Talkie",
-            "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
+            "webhook_url": "",
             "enabled": true
         }
-    ],
-    "vban": {
-        "stream_name": "",
-        "ip": "0.0.0.0",
-        "port": 6980,
-        "webhook_url": "",
-        "enabled": false
-    }
+    ]
 }

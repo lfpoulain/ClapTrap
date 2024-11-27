@@ -1,8 +1,8 @@
 import { callApi } from './api.js';
 import { showError, showSuccess } from './utils.js';
 import { getCurrentSettings } from './settings.js';
+import { socket } from './socketHandlers.js';
 
-let socket = io();
 let isDetecting = false;
 
 export async function startDetection() {

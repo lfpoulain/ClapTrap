@@ -1,20 +1,11 @@
 {
     "global": {
-        "threshold": "0.5",
+        "threshold": "0.3",
         "delay": "1.0"
     },
     "microphone": {
-        "device_index": "0",
-        "audio_source": "default",
-        "webhook_url": "",
-        "enabled": false
-    },
-    "rtsp_sources": [],
-    "vban": {
-        "stream_name": "",
-        "ip": "0.0.0.0",
-        "port": 6980,
-        "webhook_url": "",
-        "enabled": false
+        "enabled": true,
+        "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvVx",
+        "audio_source": "Microphone iMac"
     }
 }

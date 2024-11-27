@@ -133,19 +133,34 @@
                     </div>
 
                     <!-- Webhooks RTSP -->
+                    {% for stream in flux %}
                     <div class="webhook-card">
                         <div class="webhook-header">
                             <h4>
                                 <span class="webhook-icon">📹</span>
-                                Flux RTSP
+                                {{ stream.name }}
                             </h4>
+                            <label class="switch" title="Activer/Désactiver le webhook">
+                                <input type="checkbox" id="webhook-rtsp-{{ loop.index }}-enabled" 
+                                       {% if stream.webhook_url %}checked{% endif %}>
+                                <span class="slider round"></span>
+                            </label>
                         </div>
-                        <div class="webhook-content">
-                            <div id="rtspStreamsContainer">
-                                <!-- Le contenu sera généré dynamiquement par rtspSources.js -->
+                        <div class="webhook-content" {% if not stream.webhook_url %}style="display: none;"{% endif %}>
+                            <div class="webhook-input-group">
+                                <input type="url" id="webhook-rtsp-{{ loop.index }}-url" 
+                                       class="webhook-input" 
+                                       value="{{ stream.webhook_url }}"
+                                       placeholder="https://votre-serveur.com/webhook"
+                                       aria-label="URL du webhook pour {{ stream.name }}">
+                                <button type="button" class="test-webhook" data-source="rtsp-{{ loop.index }}">
+                                    <span class="icon">🔔</span>
+                                    Tester
+                                </button>
                             </div>
                         </div>
                     </div>
+                    {% endfor %}
                 </div>
             </div>
         </section>
