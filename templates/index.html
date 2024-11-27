@@ -132,97 +132,17 @@
                         </div>
                     </div>
 
-                    <!-- Sources RTSP -->
+                    <!-- Webhooks RTSP -->
                     <div class="webhook-card">
-                        <div class="card-header">
+                        <div class="webhook-header">
                             <h4>
                                 <span class="webhook-icon">📹</span>
-                                Sources RTSP
+                                Flux RTSP
                             </h4>
-                            <button id="addRTSPBtn" class="btn btn-sm btn-primary">
-                                <i class="fas fa-plus"></i> Ajouter une source
-                            </button>
                         </div>
                         <div class="webhook-content">
-                            <!-- Formulaire d'ajout -->
-                            <div id="rtspAddForm" style="display: none;" class="mb-3">
-                                <div class="webhook-card">
-                                    <div class="webhook-header">
-                                        <h4>
-                                            <span class="webhook-icon">📹</span>
-                                            Nouvelle source RTSP
-                                        </h4>
-                                    </div>
-                                    <div class="webhook-content">
-                                        <form id="add-rtsp-source-form">
-                                            <div class="webhook-input-group mb-3">
-                                                <label class="form-label">Nom</label>
-                                                <input type="text" name="name" class="webhook-input" required
-                                                       placeholder="Nom de la source">
-                                            </div>
-                                            <div class="webhook-input-group mb-3">
-                                                <label class="form-label">URL RTSP</label>
-                                                <input type="url" name="url" class="webhook-input" required
-                                                       placeholder="rtsp://votre-camera:port/flux">
-                                            </div>
-                                            <div class="webhook-input-group mb-3">
-                                                <label class="form-label">URL Webhook</label>
-                                                <input type="url" name="webhook_url" class="webhook-input"
-                                                       placeholder="https://votre-serveur.com/webhook">
-                                            </div>
-                                            <div class="webhook-actions">
-                                                <button type="submit" class="btn btn-primary">Ajouter</button>
-                                                <button type="button" class="btn btn-secondary" id="cancelRTSPAdd">Annuler</button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Liste des sources RTSP -->
-                            <div id="rtspSourcesList" class="list-group">
-                                {% if not settings.rtsp_sources %}
-                                    <div class="list-group-item text-muted">Aucune source RTSP configurée</div>
-                                {% else %}
-                                    {% for source in settings.rtsp_sources %}
-                                    <div class="webhook-card mb-3">
-                                        <div class="webhook-header">
-                                            <h4>
-                                                <span class="webhook-icon">📹</span>
-                                                {{ source.name }}
-                                            </h4>
-                                            <label class="switch" title="Activer/Désactiver la source">
-                                                <input type="checkbox" class="source-enabled" 
-                                                       {% if source.enabled %}checked{% endif %}>
-                                                <span class="slider round"></span>
-                                            </label>
-                                        </div>
-                                        <div class="webhook-content">
-                                            <div class="webhook-input-group mb-3">
-                                                <label class="form-label">URL RTSP</label>
-                                                <div class="info-text">{{ source.url }}</div>
-                                            </div>
-                                            <div class="webhook-input-group">
-                                                <label class="form-label">URL Webhook</label>
-                                                <div class="webhook-input-with-test">
-                                                    <input type="url" class="webhook-input webhook-url" 
-                                                           value="{{ source.webhook_url }}"
-                                                           placeholder="https://votre-serveur.com/webhook">
-                                                    <button type="button" class="test-webhook">
-                                                        <span class="icon">🔔</span>
-                                                        Tester
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div class="webhook-actions mt-3">
-                                                <button class="btn btn-sm btn-danger remove-rtsp-btn">
-                                                    <span>🗑️</span> Supprimer
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                {% endif %}
+                            <div id="rtspStreamsContainer">
+                                <!-- Le contenu sera généré dynamiquement par rtspSources.js -->
                             </div>
                         </div>
                     </div>
