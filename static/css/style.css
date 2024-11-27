@@ -883,3 +883,25 @@ footer a {
 .add-source-btn:hover {
     background-color: #45a049;
 }
+
+#waiting-emoji {
+    font-size: 72px;
+    opacity: 0.5;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    transition: opacity 0.3s ease-in-out;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.1); }
+    100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+/* Masquer l'emoji d'attente quand un clap est détecté */
+#detection_display.clap #waiting-emoji {
+    opacity: 0;
+}

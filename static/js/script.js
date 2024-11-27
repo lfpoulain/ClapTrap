@@ -11,6 +11,7 @@ window.showClap = function(sourceId) {
     
     const clapEmoji = document.querySelector(`#clap-${sourceId}`);
     const detectionDisplay = document.getElementById('detection_display');
+    const waitingEmoji = document.getElementById('waiting-emoji');
     
     console.log('Looking for emoji with id:', `clap-${sourceId}`);
     console.log('Found emoji element:', clapEmoji);
