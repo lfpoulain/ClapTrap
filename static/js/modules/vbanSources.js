@@ -127,11 +127,48 @@ export function refreshSavedVbanSources() {
                 const webhookInput = clone.querySelector('.webhook-url');
                 if (webhookInput) {
                     webhookInput.value = source.webhook_url || '';
+                    // Ajouter un délai de 500ms après la dernière frappe avant de sauvegarder
+                    let timeout;
+                    webhookInput.addEventListener('input', (e) => {
+                        clearTimeout(timeout);
+                        timeout = setTimeout(() => {
+                            const newWebhookUrl = e.target.value.trim();
+                            updateVBANSourceWebhook(source, newWebhookUrl);
+                        }, 500);
+                    });
                 }
                 
                 const enabledSwitch = clone.querySelector('.source-enabled');
                 if (enabledSwitch) {
                     enabledSwitch.checked = source.enabled !== false;
+                    enabledSwitch.addEventListener('change', (e) => {
+                        const enabled = e.target.checked;
+                        fetch('/api/vban/update', {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                ip: source.ip,
+                                name: source.name,
+                                enabled: enabled
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                showSuccess(enabled ? 'Source activée' : 'Source désactivée');
+                            } else {
+                                throw new Error(data.error || 'Erreur lors de la mise à jour');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors de la mise à jour:', error);
+                            showError(error.message);
+                            // Remettre le switch dans son état précédent
+                            e.target.checked = !enabled;
+                        });
+                    });
                 }
                 
                 const removeButton = clone.querySelector('.remove-vban-btn');
@@ -198,6 +235,32 @@ function saveVBANSource(source) {
     })
     .catch(error => {
         console.error('Erreur lors de la sauvegarde de la source VBAN:', error);
+        showError(error.message);
+    });
+}
+
+function updateVBANSourceWebhook(source, webhookUrl) {
+    fetch('/api/vban/update', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            ip: source.ip,
+            name: source.name,
+            webhook_url: webhookUrl
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess('Webhook mis à jour');
+        } else {
+            throw new Error(data.error || 'Erreur lors de la mise à jour du webhook');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur lors de la mise à jour du webhook:', error);
         showError(error.message);
     });
 }

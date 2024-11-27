@@ -4,12 +4,21 @@
         "delay": "1.0"
     },
     "microphone": {
-        "device_index": 0,
-        "audio_source": "Microphone iMac",
+        "enabled": true,
         "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
-        "enabled": true
+        "audio_source": "Microphone iMac"
     },
     "rtsp_sources": [],
+    "saved_vban_sources": [
+        {
+            "name": "Talkie",
+            "ip": "192.168.68.63",
+            "port": 6980,
+            "stream_name": "Talkie",
+            "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
+            "enabled": true
+        }
+    ],
     "vban": {
         "stream_name": "",
         "ip": "0.0.0.0",

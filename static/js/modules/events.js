@@ -46,21 +46,5 @@ function setupThresholdControl() {
 }
 
 function setupParameterChangeListeners() {
-    // Écouter les changements sur les champs de paramètres
-    const parameterInputs = [
-        'threshold',
-        'delay',
-        'webhook-mic-enabled',
-        'webhook-mic-url',
-        'micro_source'
-    ];
-
-    parameterInputs.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.addEventListener('change', async () => {
-                await saveSettings();
-            });
-        }
-    });
+    // Ajouter ici les écouteurs pour les changements de paramètres si nécessaire
 } 

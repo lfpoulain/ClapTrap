@@ -1,4 +1,4 @@
-import { initAudioSources, updateAudioSources } from './modules/audioSources.js';
+import { initAudioSources } from './modules/audioSources.js';
 import { initVbanSources, refreshVbanSources } from './modules/vbanSources.js';
 import { initRtspSources } from './modules/rtspSources.js';
 import { initWebhooks } from './modules/webhooks.js';

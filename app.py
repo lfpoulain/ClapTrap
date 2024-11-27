@@ -748,7 +748,7 @@ def update_vban_source():
         source = request.json
         print(f"Mise à jour source VBAN reçue: {source}")  # Debug log
         
-        if not source or 'ip' not in source:
+        if not source or 'ip' not in source or 'name' not in source:
             return jsonify({
                 'success': False,
                 'error': 'Données manquantes'
@@ -762,14 +762,15 @@ def update_vban_source():
         # Trouver et mettre à jour la source
         source_found = False
         for s in settings['saved_vban_sources']:
-            if (s['ip'] == source['ip'] and 
-                (s['stream_name'] == source.get('stream_name') or 
-                 s['stream_name'] == source.get('name'))):
-                # Mettre à jour tous les champs fournis
-                for key in ['name', 'port', 'stream_name', 'webhook_url', 'enabled']:
-                    if key in source:
-                        s[key] = source[key]
+            if s['ip'] == source['ip'] and s['name'] == source['name']:
+                # Mettre à jour le webhook_url s'il est fourni
+                if 'webhook_url' in source:
+                    s['webhook_url'] = source['webhook_url']
+                # Mettre à jour enabled s'il est fourni
+                if 'enabled' in source:
+                    s['enabled'] = source['enabled']
                 source_found = True
+                print(f"Source mise à jour: {s}")  # Debug log
                 break
                 
         if not source_found:
@@ -892,6 +893,70 @@ def save_settings_api():
             
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+
+@app.route('/api/microphone/webhook', methods=['PUT'])
+def update_microphone_webhook():
+    try:
+        data = request.get_json()
+        webhook_url = data.get('webhook_url')
+        
+        settings = load_settings()
+        settings['microphone']['webhook_url'] = webhook_url
+        save_settings(settings)
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/microphone/enabled', methods=['PUT'])
+def update_microphone_enabled():
+    try:
+        data = request.get_json()
+        enabled = data.get('enabled')
+        
+        settings = load_settings()
+        settings['microphone']['enabled'] = enabled
+        save_settings(settings)
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/rtsp/webhook', methods=['PUT'])
+def update_rtsp_webhook():
+    try:
+        data = request.get_json()
+        stream_id = data.get('stream_id')
+        webhook_url = data.get('webhook_url')
+        
+        settings = load_settings()
+        for stream in settings.get('rtsp_sources', []):
+            if stream.get('id') == stream_id:
+                stream['webhook_url'] = webhook_url
+                break
+        save_settings(settings)
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/rtsp/enabled', methods=['PUT'])
+def update_rtsp_enabled():
+    try:
+        data = request.get_json()
+        stream_id = data.get('stream_id')
+        enabled = data.get('enabled')
+        
+        settings = load_settings()
+        for stream in settings.get('rtsp_sources', []):
+            if stream.get('id') == stream_id:
+                stream['enabled'] = enabled
+                break
+        save_settings(settings)
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     try:
