@@ -186,28 +186,14 @@
     <script type="module" src="{{ url_for('static', filename='js/script.js') }}"></script>
 
     <template id="vbanDetectedSourceTemplate">
-        <div class="webhook-card mb-3">
-            <div class="webhook-header">
-                <h4>
-                    <span class="webhook-icon">🎵</span>
-                    <span class="source-name"></span>
-                </h4>
-                <div class="webhook-actions">
-                    <button class="btn btn-sm btn-success add-vban-btn">
-                        <span>➕</span> Ajouter
-                    </button>
-                </div>
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+                <strong class="source-name"></strong>
+                <small class="text-muted d-block">IP: <span class="source-ip"></span> - Port: <span class="source-port"></span></small>
             </div>
-            <div class="webhook-content">
-                <div class="webhook-input-group mb-3">
-                    <label class="form-label">Adresse IP</label>
-                    <div class="info-text source-ip"></div>
-                </div>
-                <div class="webhook-input-group mb-3">
-                    <label class="form-label">Port</label>
-                    <div class="info-text source-port"></div>
-                </div>
-            </div>
+            <button class="btn btn-sm btn-success add-vban-btn">
+                <i class="fas fa-plus"></i> Ajouter
+            </button>
         </div>
     </template>
 

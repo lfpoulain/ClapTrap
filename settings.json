@@ -9,15 +9,7 @@
         "webhook_url": "",
         "enabled": false
     },
-    "rtsp_sources": [
-        {
-            "id": "12721149-91f2-4666-a9e4-200c09471bd0",
-            "name": "qsdqsd",
-            "url": "qsdqsd",
-            "webhook_url": "qsdqsd",
-            "enabled": true
-        }
-    ],
+    "rtsp_sources": [],
     "vban": {
         "stream_name": "",
         "ip": "0.0.0.0",

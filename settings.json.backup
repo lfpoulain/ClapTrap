@@ -16,15 +16,5 @@
         "port": 6980,
         "webhook_url": "",
         "enabled": false
-    },
-    "saved_vban_sources": [
-        {
-            "name": "Talkie",
-            "ip": "192.168.68.63",
-            "port": 6980,
-            "stream_name": "Talkie",
-            "webhook_url": "",
-            "enabled": true
-        }
-    ]
+    }
 }

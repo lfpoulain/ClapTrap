@@ -89,8 +89,8 @@ function setupStreamEventListeners(element, stream) {
     let urlTimeout;
     urlInput.addEventListener('input', (e) => {
         clearTimeout(urlTimeout);
-        urlTimeout = setTimeout(() => {
-            updateStream(stream.id, { url: e.target.value.trim() });
+        urlTimeout = setTimeout(async () => {
+            await updateStream(stream.id, { url: e.target.value.trim() });
         }, 500);
     });
 
@@ -99,22 +99,22 @@ function setupStreamEventListeners(element, stream) {
     let webhookTimeout;
     webhookInput.addEventListener('input', (e) => {
         clearTimeout(webhookTimeout);
-        webhookTimeout = setTimeout(() => {
-            updateStream(stream.id, { webhook_url: e.target.value.trim() });
+        webhookTimeout = setTimeout(async () => {
+            await updateStream(stream.id, { webhook_url: e.target.value.trim() });
         }, 500);
     });
 
     // Enabled switch
     const enabledSwitch = element.querySelector('.stream-enabled');
-    enabledSwitch.addEventListener('change', (e) => {
-        updateStream(stream.id, { enabled: e.target.checked });
+    enabledSwitch.addEventListener('change', async (e) => {
+        await updateStream(stream.id, { enabled: e.target.checked });
     });
 
     // Delete button
     const deleteButton = element.querySelector('.delete-stream');
-    deleteButton.addEventListener('click', () => {
+    deleteButton.addEventListener('click', async () => {
         if (confirm('Voulez-vous vraiment supprimer ce flux RTSP ?')) {
-            deleteStream(stream.id);
+            await deleteStream(stream.id);
         }
     });
 }
@@ -205,6 +205,7 @@ async function updateStream(streamId, data) {
             if (index !== -1) {
                 rtspStreams[index] = { ...rtspStreams[index], ...data };
             }
+            await saveSettings();
             showSuccess('Flux RTSP mis à jour');
         } else {
             throw new Error(response.error || 'Erreur lors de la mise à jour');
@@ -220,6 +221,7 @@ async function deleteStream(streamId) {
         if (response.success) {
             rtspStreams = rtspStreams.filter(s => s.id !== streamId);
             setupRtspStreams();
+            await saveSettings();
             showSuccess('Flux RTSP supprimé');
         } else {
             throw new Error(response.error || 'Erreur lors de la suppression');
