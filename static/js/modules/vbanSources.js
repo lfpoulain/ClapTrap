@@ -12,10 +12,10 @@ export function initVbanSources() {
         });
     }
 
-    // Charger les sources initiales
+    // Charger les sources initiales une seule fois
     refreshVbanSources();
-    // Rafraîchir périodiquement
-    setInterval(refreshVbanSources, 10000);
+    // Supprimer le rafraîchissement périodique
+    // setInterval(refreshVbanSources, 10000);
 }
 
 export function refreshVbanSources() {

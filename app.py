@@ -11,6 +11,7 @@ import os
 from datetime import datetime
 from events import socketio  # Importation de l'instance Socket.IO
 from vban_discovery import VBANDiscovery
+import socket
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'votre_clé_secrète_ici'
@@ -33,29 +34,41 @@ last_vban_init_attempt = 0
 VBAN_INIT_RETRY_DELAY = 5  # secondes
 
 def init_vban_discovery():
-    global vban_discovery, last_vban_init_attempt
-    current_time = time.time()
+    """Initialise la découverte VBAN"""
+    global vban_discovery
     
-    # Vérifier si nous devons attendre avant de réessayer
-    if current_time - last_vban_init_attempt < VBAN_INIT_RETRY_DELAY:
-        print(f"Attente avant nouvelle tentative d'initialisation VBAN ({VBAN_INIT_RETRY_DELAY - (current_time - last_vban_init_attempt):.1f}s)")
-        return False
-        
-    last_vban_init_attempt = current_time
+    max_retries = 3
+    retry_delay = 2.3  # secondes
     
-    if vban_discovery:
+    for attempt in range(max_retries):
         try:
-            vban_discovery.stop()
-        except:
-            pass
+            if vban_discovery is None:
+                vban_discovery = VBANDiscovery()
             
-    try:
-        vban_discovery = VBANDiscovery()
-        vban_discovery.start()
-        return True
-    except Exception as e:
-        print(f"Erreur lors de l'initialisation VBAN: {e}")
-        return False
+            # Créer et configurer le socket
+            if vban_discovery._sock is None:
+                vban_discovery._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                vban_discovery._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                vban_discovery._sock.settimeout(0.5)
+                vban_discovery._sock.bind((vban_discovery.bind_ip, vban_discovery.bind_port))
+                print(f"Socket VBAN initialisé sur {vban_discovery.bind_ip}:{vban_discovery.bind_port}")
+            
+            return True
+            
+        except Exception as e:
+            print(f"Erreur lors de l'initialisation VBAN (tentative {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                print(f"Attente avant nouvelle tentative d'initialisation VBAN ({retry_delay}s)")
+                time.sleep(retry_delay)
+            if vban_discovery and vban_discovery._sock:
+                try:
+                    vban_discovery._sock.close()
+                except:
+                    pass
+                vban_discovery._sock = None
+    
+    print("Échec de l'initialisation VBAN après plusieurs tentatives")
+    return False
 
 # Initialiser la découverte VBAN
 init_vban_discovery()
@@ -828,14 +841,37 @@ def get_rtsp_streams():
 @app.route('/api/vban/sources', methods=['GET'])
 def get_vban_sources():
     try:
-        # Utiliser get_active_sources au lieu de scan_once
-        sources = vban_discovery.get_active_sources()
-        print(f"Sources VBAN actives trouvées: {len(sources)}")  # Debug log
-        formatted_sources = [source.to_dict() for source in sources]
-        print(f"Sources formatées: {formatted_sources}")  # Debug log
+        # S'assurer que la découverte VBAN est initialisée
+        if not init_vban_discovery():
+            return jsonify({'error': 'Impossible d\'initialiser la découverte VBAN'}), 500
+            
+        # Effectuer un scan rapide
+        start_time = time.time()
+        active_sources = []
+        
+        try:
+            while time.time() - start_time < 1.0:  # Scan pendant 1 seconde
+                try:
+                    data, addr = vban_discovery._sock.recvfrom(2048)
+                    if len(data) >= 4 and data[:4] == b'VBAN':
+                        source = vban_discovery._parse_vban_packet(data, addr)
+                        if source:
+                            # Éviter les doublons
+                            if not any(s.ip == source.ip and s.port == source.port for s in active_sources):
+                                active_sources.append(source)
+                except socket.timeout:
+                    continue
+                    
+        except Exception as e:
+            print(f"Erreur pendant le scan VBAN: {e}")
+            
+        print(f"Sources VBAN actives trouvées: {len(active_sources)}")
+        formatted_sources = [source.to_dict() for source in active_sources]
+        print(f"Sources formatées: {formatted_sources}")
         return jsonify(formatted_sources)
+        
     except Exception as e:
-        print(f"Erreur lors de la récupération des sources VBAN: {str(e)}")  # Debug log
+        print(f"Erreur lors de la récupération des sources VBAN: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/vban/saved-sources', methods=['GET'])

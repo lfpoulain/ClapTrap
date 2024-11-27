@@ -195,18 +195,20 @@ class VBANDiscovery:
                 print(f"Nettoyage des sources: {old_count - new_count} source(s) supprimée(s)")
             
     def get_active_sources(self) -> List[VBANSource]:
-        """Retourne la liste des sources VBAN actives"""
-        with self._lock:
-            current_time = time.time()
-            active_sources = [
-                source for source in self.sources.values()
-                if current_time - source.last_seen < 10.0  # Utiliser le même timeout que cleanup
-            ]
-            print(f"Sources actives: {len(active_sources)}")
-            for source in active_sources:
-                print(f"- {source.stream_name} ({source.ip}:{source.port}), "
-                      f"dernière vue il y a {current_time - source.last_seen:.1f}s")
-            return active_sources
+        """Retourne la liste des sources actives"""
+        try:
+            with self._lock:
+                # S'assurer que self.sources est initialisé
+                if not hasattr(self, 'sources'):
+                    self.sources = {}
+                sources = list(self.sources.values())
+                print(f"Sources actives: {len(sources)}")
+                for source in sources:
+                    print(f"- {source.stream_name} ({source.ip}:{source.port})")
+                return sources
+        except Exception as e:
+            print(f"Erreur dans get_active_sources: {str(e)}")
+            return []
 
 # Example d'utilisation
 if __name__ == "__main__":
