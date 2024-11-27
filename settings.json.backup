@@ -8,7 +8,15 @@
         "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
         "audio_source": "Microphone iMac"
     },
-    "rtsp_sources": [],
+    "rtsp_sources": [
+        {
+            "id": "3b89cfcf-dea3-4a88-ab8d-d827de14cc17",
+            "name": "testmanu",
+            "url": "https://rtsp.com/manu",
+            "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
+            "enabled": true
+        }
+    ],
     "saved_vban_sources": [
         {
             "name": "Talkie",

@@ -12,6 +12,7 @@ from datetime import datetime
 from events import socketio  # Importation de l'instance Socket.IO
 from vban_discovery import VBANDiscovery
 import socket
+import uuid
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'votre_clé_secrète_ici'
@@ -824,6 +825,79 @@ def get_rtsp_streams():
     try:
         settings = load_settings()
         return jsonify(settings.get('rtsp_sources', []))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/rtsp/stream', methods=['POST'])
+def add_rtsp_stream():
+    try:
+        data = request.get_json()
+        url = data.get('url')
+        name = data.get('name', '')
+        webhook_url = data.get('webhook_url', '')
+        enabled = data.get('enabled', True)
+        
+        if not url:
+            return jsonify({'error': 'URL RTSP requise'}), 400
+            
+        settings = load_settings()
+        if 'rtsp_sources' not in settings:
+            settings['rtsp_sources'] = []
+            
+        # Générer un ID unique pour le stream
+        stream_id = str(uuid.uuid4())
+        
+        new_stream = {
+            'id': stream_id,
+            'name': name,
+            'url': url,
+            'webhook_url': webhook_url,
+            'enabled': enabled
+        }
+        
+        settings['rtsp_sources'].append(new_stream)
+        save_settings(settings)
+        
+        return jsonify({'success': True, 'stream': new_stream})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/rtsp/stream/<stream_id>', methods=['PUT'])
+def update_rtsp_stream(stream_id):
+    try:
+        data = request.get_json()
+        settings = load_settings()
+        
+        for stream in settings.get('rtsp_sources', []):
+            if stream.get('id') == stream_id:
+                # Mettre à jour les champs fournis
+                if 'url' in data:
+                    stream['url'] = data['url']
+                if 'name' in data:
+                    stream['name'] = data['name']
+                if 'webhook_url' in data:
+                    stream['webhook_url'] = data['webhook_url']
+                if 'enabled' in data:
+                    stream['enabled'] = data['enabled']
+                
+                save_settings(settings)
+                return jsonify({'success': True, 'stream': stream})
+                
+        return jsonify({'error': 'Stream non trouvé'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/rtsp/stream/<stream_id>', methods=['DELETE'])
+def delete_rtsp_stream(stream_id):
+    try:
+        settings = load_settings()
+        rtsp_sources = settings.get('rtsp_sources', [])
+        
+        # Filtrer pour retirer le stream spécifié
+        settings['rtsp_sources'] = [s for s in rtsp_sources if s.get('id') != stream_id]
+        save_settings(settings)
+        
+        return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
