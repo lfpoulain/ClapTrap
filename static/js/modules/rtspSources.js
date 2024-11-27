@@ -89,8 +89,8 @@ function setupStreamEventListeners(element, stream) {
     let urlTimeout;
     urlInput.addEventListener('input', (e) => {
         clearTimeout(urlTimeout);
-        urlTimeout = setTimeout(() => {
-            updateStream(stream.id, { url: e.target.value.trim() });
+        urlTimeout = setTimeout(async () => {
+            await updateStream(stream.id, { url: e.target.value.trim() });
         }, 500);
     });
 
@@ -99,22 +99,22 @@ function setupStreamEventListeners(element, stream) {
     let webhookTimeout;
     webhookInput.addEventListener('input', (e) => {
         clearTimeout(webhookTimeout);
-        webhookTimeout = setTimeout(() => {
-            updateStream(stream.id, { webhook_url: e.target.value.trim() });
+        webhookTimeout = setTimeout(async () => {
+            await updateStream(stream.id, { webhook_url: e.target.value.trim() });
         }, 500);
     });
 
     // Enabled switch
     const enabledSwitch = element.querySelector('.stream-enabled');
-    enabledSwitch.addEventListener('change', (e) => {
-        updateStream(stream.id, { enabled: e.target.checked });
+    enabledSwitch.addEventListener('change', async (e) => {
+        await updateStream(stream.id, { enabled: e.target.checked });
     });
 
     // Delete button
     const deleteButton = element.querySelector('.delete-stream');
-    deleteButton.addEventListener('click', () => {
+    deleteButton.addEventListener('click', async () => {
         if (confirm('Voulez-vous vraiment supprimer ce flux RTSP ?')) {
-            deleteStream(stream.id);
+            await deleteStream(stream.id);
         }
     });
 }
@@ -205,6 +205,7 @@ async function updateStream(streamId, data) {
             if (index !== -1) {
                 rtspStreams[index] = { ...rtspStreams[index], ...data };
             }
+            await saveSettings();
             showSuccess('Flux RTSP mis à jour');
         } else {
             throw new Error(response.error || 'Erreur lors de la mise à jour');
@@ -220,6 +221,7 @@ async function deleteStream(streamId) {
         if (response.success) {
             rtspStreams = rtspStreams.filter(s => s.id !== streamId);
             setupRtspStreams();
+            await saveSettings();
             showSuccess('Flux RTSP supprimé');
         } else {
             throw new Error(response.error || 'Erreur lors de la suppression');
@@ -227,4 +229,128 @@ async function deleteStream(streamId) {
     } catch (error) {
         showError('Erreur lors de la suppression du flux RTSP');
     }
+}
+
+// RTSP Sources Management Module
+export function initRTSPSourcesManager() {
+    const addRTSPSourceForm = document.getElementById('add-rtsp-source-form');
+    const rtspSourcesList = document.getElementById('rtsp-sources-list');
+
+    function createRTSPSourceElement(source) {
+        const sourceElement = document.createElement('div');
+        sourceElement.className = 'source-item';
+        sourceElement.innerHTML = `
+            <div class="source-info">
+                <span class="source-name">${source.name}</span>
+                <span class="source-details">
+                    URL: ${source.url}
+                    ${source.webhook_url ? `| Webhook: ${source.webhook_url}` : ''}
+                </span>
+            </div>
+            <div class="source-controls">
+                <label class="switch">
+                    <input type="checkbox" ${source.enabled ? 'checked' : ''}>
+                    <span class="slider round"></span>
+                </label>
+                <button class="delete-btn">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+
+        const toggleSwitch = sourceElement.querySelector('input[type="checkbox"]');
+        toggleSwitch.addEventListener('change', async () => {
+            source.enabled = toggleSwitch.checked;
+            await updateRTSPSource(source);
+        });
+
+        const deleteButton = sourceElement.querySelector('.delete-btn');
+        deleteButton.addEventListener('click', async () => {
+            await deleteRTSPSource(source);
+            sourceElement.remove();
+        });
+
+        return sourceElement;
+    }
+
+    async function loadRTSPSources() {
+        try {
+            const response = await fetch('/api/settings');
+            const settings = await response.json();
+            rtspSourcesList.innerHTML = '';
+            settings.rtsp_sources.forEach(source => {
+                rtspSourcesList.appendChild(createRTSPSourceElement(source));
+            });
+        } catch (error) {
+            console.error('Error loading RTSP sources:', error);
+        }
+    }
+
+    async function addRTSPSource(source) {
+        try {
+            const response = await fetch('/api/rtsp_sources', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(source)
+            });
+            if (response.ok) {
+                rtspSourcesList.appendChild(createRTSPSourceElement(source));
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Error adding RTSP source:', error);
+            return false;
+        }
+    }
+
+    async function updateRTSPSource(source) {
+        try {
+            await fetch('/api/rtsp_sources', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(source)
+            });
+        } catch (error) {
+            console.error('Error updating RTSP source:', error);
+        }
+    }
+
+    async function deleteRTSPSource(source) {
+        try {
+            await fetch('/api/rtsp_sources', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(source)
+            });
+        } catch (error) {
+            console.error('Error deleting RTSP source:', error);
+        }
+    }
+
+    if (addRTSPSourceForm) {
+        addRTSPSourceForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(addRTSPSourceForm);
+            const source = {
+                name: formData.get('name'),
+                url: formData.get('url'),
+                webhook_url: formData.get('webhook_url'),
+                enabled: true
+            };
+
+            if (await addRTSPSource(source)) {
+                addRTSPSourceForm.reset();
+            }
+        });
+    }
+
+    // Initial load
+    loadRTSPSources();
 } 

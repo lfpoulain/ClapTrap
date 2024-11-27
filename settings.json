@@ -5,7 +5,7 @@
     },
     "microphone": {
         "enabled": true,
-        "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
+        "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvVx",
         "audio_source": "Microphone iMac"
     },
     "rtsp_sources": [

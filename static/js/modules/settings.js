@@ -13,17 +13,21 @@ export function updateSettings(newSettings) {
 
 export async function saveSettings() {
     try {
-        // Récupérer tous les paramètres actuels de l'interface
-        const settings = {
-            global: {
-                threshold: document.getElementById('threshold').value,
-                delay: document.getElementById('delay').value
-            },
-            microphone: {
-                enabled: document.getElementById('webhook-mic-enabled').checked,
-                webhook_url: document.getElementById('webhook-mic-url').value,
-                audio_source: document.getElementById('micro_source').value.split('|')[1]
-            }
+        // Commencer avec les paramètres actuels pour préserver les configs RTSP et VBAN
+        const settings = { ...currentSettings };
+        
+        // Mettre à jour avec les nouveaux paramètres de l'interface
+        settings.global = {
+            ...(settings.global || {}),
+            threshold: document.getElementById('threshold').value,
+            delay: document.getElementById('delay').value
+        };
+        
+        settings.microphone = {
+            ...(settings.microphone || {}),
+            enabled: document.getElementById('webhook-mic-enabled').checked,
+            webhook_url: document.getElementById('webhook-mic-url').value,
+            audio_source: document.getElementById('micro_source').value.split('|')[1]
         };
 
         const response = await callApi('/api/settings/save', 'POST', settings);
