@@ -6,39 +6,48 @@ export function initializeSocketIO() {
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
-        reconnectionAttempts: 5,
-        transports: ['websocket', 'polling']
+        reconnectionAttempts: 5
     });
     
     socket.on('connect', () => {
         console.log('🟢 Socket.IO Connected with ID:', socket.id);
-        socket.emit('test_connection');
     });
     
+    // Gestionnaire pour les claps
     socket.on('clap', (data) => {
         console.log('🎯 Clap event received:', data);
-        const sourceId = data.source_id;
-        console.log('Source ID:', sourceId);
-        
-        // Vérifier l'élément avant d'appeler showClap
-        const clapEmoji = document.querySelector(`#clap-${sourceId}`);
-        console.log('Clap emoji element:', clapEmoji);
-        
-        if (clapEmoji) {
-            console.log('Showing clap emoji');
-            window.showClap(sourceId);
+        if (typeof window.showClap === 'function') {
+            window.showClap(data.source_id);
         } else {
-            console.error('❌ Clap emoji element not found');
-            // Log tous les emojis disponibles
-            const allEmojis = document.querySelectorAll('.clap-emoji');
-            console.log('Available emoji elements:', Array.from(allEmojis));
+            console.error('❌ showClap function not found in window object');
         }
     });
-    
-    // Ajouter un gestionnaire pour les messages de debug
-    socket.on('debug', (data) => {
-        console.log('🔍 Server debug:', data);
+
+    // Gestionnaire pour les labels
+    socket.on('labels', (data) => {
+        console.log('🏷️ Labels received:', data);
+        const container = document.getElementById('detected_labels');
+        if (!container) {
+            console.error('❌ Labels container not found');
+            return;
+        }
+
+        // Vider le conteneur
+        container.innerHTML = '';
+
+        // Ajouter les nouveaux labels
+        if (data.detected && Array.isArray(data.detected)) {
+            data.detected.forEach(label => {
+                const labelElement = document.createElement('span');
+                labelElement.className = 'label';
+                labelElement.innerHTML = `
+                    ${label.label}
+                    <span class="label-score">${Math.round(label.score * 100)}%</span>
+                `;
+                container.appendChild(labelElement);
+            });
+        }
     });
-    
+
     return socket;
 } 

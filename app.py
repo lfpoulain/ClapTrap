@@ -595,10 +595,10 @@ def handle_clap(data):
     print(f"🎯 Clap detected: {data}")  # Debug log
     try:
         socketio.emit('clap', {
-            'source_id': data.get('source_id'),
+            'source_id': 'microphone',
             'timestamp': time.time()
         }, broadcast=True)
-        print(f"✅ Clap event emitted for source: {data.get('source_id')}")
+        print(f"✅ Clap event emitted")
     except Exception as e:
         print(f"❌ Error emitting clap event: {str(e)}")
 
