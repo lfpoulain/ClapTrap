@@ -13,10 +13,22 @@ from events import socketio  # Importation de l'instance Socket.IO
 from vban_discovery import VBANDiscovery
 import socket
 import uuid
+from threading import Lock
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+import logging
+import psutil
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'votre_clé_secrète_ici'
-socketio.init_app(app, cors_allowed_origins="*")
+socketio = SocketIO(app, 
+    cors_allowed_origins="*",
+    logger=True,
+    engineio_logger=True,
+    ping_timeout=60,
+    ping_interval=25,
+    async_mode='threading'
+)
 
 # Définir le chemin absolu du dossier de l'application
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -122,49 +134,13 @@ class VBANSource:
         )
 
 class Settings:
-    def __init__(self, settings):
-        self.settings = settings
-
-    def get_saved_vban_sources(self):
-        sources = self.settings.get("saved_vban_sources", [])
-        return [VBANSource.from_dict(source) for source in sources]
-
-    def save_vban_source(self, source: VBANSource):
-        if "saved_vban_sources" not in self.settings:
-            self.settings["saved_vban_sources"] = []
-        
-        # Vérifier si la source existe déjà (même IP et stream_name)
-        existing_sources = self.settings["saved_vban_sources"]
-        for i, existing in enumerate(existing_sources):
-            if existing["ip"] == source.ip and existing["stream_name"] == source.stream_name:
-                # Mettre à jour la source existante
-                existing_sources[i] = source.to_dict()
-                self.save()
-                return
-        
-        # Ajouter nouvelle source
-        self.settings["saved_vban_sources"].append(source.to_dict())
-        self.save()
-
-    def remove_vban_source(self, ip: str, stream_name: str):
-        if "saved_vban_sources" not in self.settings:
-            return
-        
-        self.settings["saved_vban_sources"] = [
-            source for source in self.settings["saved_vban_sources"]
-            if not (source["ip"] == ip and source["stream_name"] == stream_name)
-        ]
-        self.save()
-
-    def update_vban_source(self, ip: str, stream_name: str, updates: dict):
-        if "saved_vban_sources" not in self.settings:
-            return
-        
-        for source in self.settings["saved_vban_sources"]:
-            if source["ip"] == ip and source["stream_name"] == stream_name:
-                source.update(updates)
-                self.save()
-                break
+    def __init__(self):
+        self.lock = Lock()
+    
+    def save_settings(self, new_settings):
+        with self.lock:
+            with open('settings.json', 'w') as f:
+                json.dump(new_settings, f, indent=4)
 
 def save_settings(new_settings):
     """Sauvegarde les paramètres avec une gestion d'erreurs améliorée"""
@@ -615,13 +591,16 @@ def validate_settings(settings):
     return True
 
 @socketio.on('clap_detected')
-def handle_clap(source_type, source_id):
-    print(f"Clap detected from {source_type} - {source_id}")  # Log pour debug
-    socketio.emit('clap_detected', {
-        'source_type': source_type,
-        'source_id': source_id,
-        'timestamp': time.time()
-    })
+def handle_clap(data):
+    print(f"🎯 Clap detected: {data}")  # Debug log
+    try:
+        socketio.emit('clap', {
+            'source_id': data.get('source_id'),
+            'timestamp': time.time()
+        }, broadcast=True)
+        print(f"✅ Clap event emitted for source: {data.get('source_id')}")
+    except Exception as e:
+        print(f"❌ Error emitting clap event: {str(e)}")
 
 @app.route('/api/vban/save', methods=['POST'])
 def save_vban_source():
@@ -1031,6 +1010,39 @@ def update_rtsp_enabled():
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+class WebhookManager:
+    def __init__(self):
+        self.session = requests.Session()
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[500, 502, 503, 504]
+        )
+        self.session.mount('http://', HTTPAdapter(max_retries=retry_strategy))
+        self.session.mount('https://', HTTPAdapter(max_retries=retry_strategy))
+    
+    def send_webhook(self, url, data):
+        try:
+            response = self.session.post(url, json=data, timeout=5)
+            response.raise_for_status()
+            return True
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Webhook failed: {str(e)}")
+            return False
+
+@socketio.on('connect')
+def handle_connect():
+    print("🔌 Client connecté")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print("🔌 Client déconnecté")
+
+@socketio.on('test_connection')
+def handle_test():
+    print("🔔 Test de connexion reçu")
+    socketio.emit('debug', {'message': 'Test serveur'})
 
 if __name__ == '__main__':
     try:

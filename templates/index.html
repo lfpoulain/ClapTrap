@@ -22,7 +22,9 @@
     <main class="dashboard">
         <!-- Panneau de visualisation -->
         <section class="visualization-panel">
-            <div id="detection_display"></div>
+            <div id="detection_display">
+                <span id="clap-microphone" class="clap-emoji" style="display: none;">👏</span>
+            </div>
             <div class="control-panel">
                 <button id="startButton" class="btn btn-primary">Démarrer la détection</button>
                 <button id="stopButton" class="btn btn-danger" style="display: none;">Arrêter la détection</button>
@@ -95,9 +97,6 @@
                                 </select>
                             </div>
                             <div class="microphone-section">
-                                <div class="clap-indicator">
-                                    <i class="fas fa-hands clap-icon"></i>
-                                </div>
                             </div>
                         </div>
                     </div>

@@ -85,21 +85,23 @@ h1 {
     margin-bottom: 2rem;
     border: 2px solid transparent;
     overflow: visible;
+    position: relative;
+    transform-origin: center center;
 }
 
 #detection_display.clap {
     background: var(--success-color);
-    transform: scale(1.1);
+    transform: scale(1.05);
     color: white;
     border-color: var(--success-color);
     box-shadow: 0 0 20px rgba(40, 167, 69, 0.3);
-    animation: clap-pulse 0.5s ease-in-out;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes clap-pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-    100% { transform: scale(1.1); }
+    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
 }
 
 /* Configuration Panel */
@@ -533,7 +535,7 @@ footer a {
 @keyframes pulse {
     0% { transform: scale(1); }
     50% { transform: scale(1.2); }
-    100% { transform: scale(1); }
+    100% { transform: scale(1.1); }
 }
 
 .clap-icon.active {
@@ -557,20 +559,39 @@ footer a {
 }
 
 .clap-emoji {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
     position: absolute;
-    font-size: 24px;
-    animation: fadeOut 1s ease-out;
     z-index: 1000;
+    font-size: 72px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    will-change: transform, opacity;
 }
 
-@keyframes fadeOut {
-    from {
-        opacity: 1;
-        transform: scale(1.2);
-    }
-    to {
+.clap-emoji.visible {
+    opacity: 1;
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    animation: clap-pulse 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes clap-pulse {
+    0% { 
+        transform: translate(-50%, -50%) scale(0.8); 
         opacity: 0;
-        transform: scale(1);
+    }
+    50% { 
+        transform: translate(-50%, -50%) scale(1.1); 
+        opacity: 1;
+    }
+    100% { 
+        transform: translate(-50%, -50%) scale(1); 
+        opacity: 1;
     }
 }
 

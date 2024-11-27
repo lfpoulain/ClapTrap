@@ -265,26 +265,23 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
                     current_time = time.time()
                     if current_time - last_clap_time > delay:
                         logging.info("CLAP")
-                        socketio.emit("clap", {"message": "Applaudissement détecté!"})
-                        
-                        # Si c'est une URL RTSP
-                        if audio_source.startswith("rtsp"):
-                            for flux in fluxes:
-                                if flux["rtsp_url"] in [rtsp_url]:
-                                    try:
-                                        response = requests.post(flux["webhook_url"])
-                                        logging.info(f"Webhook RTSP appelé: {response.status_code}")
-                                    except Exception as e:
-                                        logging.error(f"Erreur lors de l'appel webhook RTSP: {e}")
-                                    break
-                        # Sinon c'est un microphone
-                        else:
-                            try:
+                        try:
+                            # Émettre l'événement avec plus d'informations
+                            print("🔔 Émission de l'événement clap")
+                            socketio.emit('clap', {
+                                'source_id': 'microphone',
+                                'timestamp': time.time(),
+                                'score': float(score_sum)
+                            }, namespace='/')  # Spécifier le namespace
+                            print("✅ Événement clap émis")
+                            
+                            # Appel webhook si configuré
+                            if webhook_url:
                                 response = requests.post(webhook_url)
                                 logging.info(f"Webhook microphone appelé: {response.status_code}")
-                            except Exception as e:
-                                logging.error(f"Erreur lors de l'appel webhook microphone: {e}")
-                                
+                        except Exception as e:
+                            print(f"❌ Erreur lors de l'émission de l'événement clap: {str(e)}")
+                            
                         last_clap_time = current_time
                 classification_result_list.clear()
 

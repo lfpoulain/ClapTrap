@@ -1,76 +1,44 @@
 import { showNotification, showSuccess, showError } from './notifications.js';
 
 export function initializeSocketIO() {
-    const socket = io.connect('http://' + document.domain + ':16045', {
+    console.log('🔌 Initializing Socket.IO...');
+    const socket = io({
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: 5,
         transports: ['websocket', 'polling']
     });
-
+    
     socket.on('connect', () => {
-        console.log('Connecté au serveur Socket.IO');
-        showSuccess('Connecté au serveur');
+        console.log('🟢 Socket.IO Connected with ID:', socket.id);
+        socket.emit('test_connection');
     });
-
-    socket.on('connect_error', (error) => {
-        console.error('Erreur de connexion Socket.IO:', error);
-        const startButton = document.getElementById('startButton');
-        if (startButton && startButton.style.display !== 'inline-flex') {
-            showError('Erreur de connexion au serveur');
-        }
-    });
-
-    // Gestion des claps
+    
     socket.on('clap', (data) => {
-        console.log('Clap détecté:', data);
+        console.log('🎯 Clap event received:', data);
+        const sourceId = data.source_id;
+        console.log('Source ID:', sourceId);
         
-        // Gestion du detection_display
-        const display = document.getElementById('detection_display');
-        if (display) {
-            display.innerHTML = '👏';
-            display.classList.add('clap');
-            
-            setTimeout(() => {
-                display.innerHTML = '';
-                display.classList.remove('clap');
-            }, 1000);
-        }
-
-        // Gestion de l'icône clap
-        const clapIcon = document.querySelector('.clap-icon');
-        if (clapIcon) {
-            clapIcon.classList.add('active');
-            setTimeout(() => {
-                clapIcon.classList.remove('active');
-            }, 1000);
+        // Vérifier l'élément avant d'appeler showClap
+        const clapEmoji = document.querySelector(`#clap-${sourceId}`);
+        console.log('Clap emoji element:', clapEmoji);
+        
+        if (clapEmoji) {
+            console.log('Showing clap emoji');
+            window.showClap(sourceId);
+        } else {
+            console.error('❌ Clap emoji element not found');
+            // Log tous les emojis disponibles
+            const allEmojis = document.querySelectorAll('.clap-emoji');
+            console.log('Available emoji elements:', Array.from(allEmojis));
         }
     });
-
-    // Gestion des labels
-    socket.on('labels', (data) => {
-        console.log('Labels reçus:', data);
-        const labelsDiv = document.getElementById('detected_labels');
-        if (!labelsDiv) {
-            console.error('Element detected_labels non trouvé');
-            return;
-        }
-
-        // S'assurer que le conteneur est visible
-        labelsDiv.style.display = 'block';
-        
-        if (data.detected && Array.isArray(data.detected)) {
-            labelsDiv.innerHTML = '';
-            
-            const sortedLabels = [...data.detected]
-                .sort((a, b) => b.score - a.score)
-                .slice(0, 5);
-            
-            sortedLabels.forEach(item => {
-                const labelElement = document.createElement('div');
-                labelElement.classList.add('label');
-                labelElement.textContent = `${item.label} (${Math.round(item.score * 100)}%)`;
-                labelsDiv.appendChild(labelElement);
-            });
-        }
+    
+    // Ajouter un gestionnaire pour les messages de debug
+    socket.on('debug', (data) => {
+        console.log('🔍 Server debug:', data);
     });
-
+    
     return socket;
 } 

@@ -1,6 +1,6 @@
 {
     "global": {
-        "threshold": "0.3",
+        "threshold": "0.1",
         "delay": "1.0"
     },
     "microphone": {
@@ -17,16 +17,7 @@
             "enabled": true
         }
     ],
-    "saved_vban_sources": [
-        {
-            "name": "Talkie",
-            "ip": "192.168.68.63",
-            "port": 6980,
-            "stream_name": "Talkie",
-            "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
-            "enabled": true
-        }
-    ],
+    "saved_vban_sources": [],
     "vban": {
         "stream_name": "",
         "ip": "0.0.0.0",
