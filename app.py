@@ -181,6 +181,7 @@ def save_settings(new_settings):
                 "enabled": False
             },
             "rtsp_sources": [],
+            "saved_vban_sources": [],  # Ajout de la liste des sources VBAN sauvegardées
             "vban": {
                 "stream_name": "",
                 "ip": "0.0.0.0",
@@ -197,36 +198,23 @@ def save_settings(new_settings):
                 current_settings.update(json.load(f))
 
         # Mettre à jour avec les nouveaux paramètres
-        if 'global' in new_settings:
-            current_settings['global'].update(new_settings['global'])
-        if 'microphone' in new_settings:
-            # S'assurer que device_index est un entier
-            if 'device_index' in new_settings['microphone']:
-                try:
-                    # Convertir en entier si c'est une chaîne
-                    device_index = int(new_settings['microphone']['device_index'])
-                    new_settings['microphone']['device_index'] = device_index
-                except (ValueError, TypeError):
-                    print(f"Erreur de conversion de device_index: {new_settings['microphone']['device_index']}")
-            current_settings['microphone'].update(new_settings['microphone'])
-        if 'rtsp_sources' in new_settings:
-            current_settings['rtsp_sources'] = new_settings['rtsp_sources']
-        if 'vban' in new_settings:
-            current_settings['vban'].update(new_settings['vban'])
+        current_settings.update(new_settings)
 
         # Sauvegarder dans un fichier temporaire d'abord
         with open(SETTINGS_TEMP, 'w') as f:
             json.dump(current_settings, f, indent=4)
-        
-        # Si l'écriture a réussi, remplacer le fichier original
+
+        # Faire une sauvegarde de l'ancien fichier si nécessaire
+        if os.path.exists(SETTINGS_FILE):
+            os.replace(SETTINGS_FILE, SETTINGS_BACKUP)
+
+        # Renommer le fichier temporaire
         os.replace(SETTINGS_TEMP, SETTINGS_FILE)
-        
+
         return True, "Paramètres sauvegardés avec succès"
-            
+
     except Exception as e:
-        error_msg = f"Erreur lors de la sauvegarde des paramètres: {str(e)}"
-        print(error_msg)
-        return False, error_msg
+        return False, f"Erreur lors de la sauvegarde des paramètres: {str(e)}"
 
 def load_flux():
     try:
@@ -396,7 +384,7 @@ def stop_detection_route():
     try:
         # Arrêter la détection
         if stop_detection():
-            # Émettre un événement de statut avant d'arr��ter
+            # Émettre un événement de statut avant d'arrter
             socketio.emit('detection_status', {'status': 'stopped'})
             return jsonify({'success': True})
         else:
@@ -450,7 +438,7 @@ def refresh_vban():
         print(f"Sources formatées: {formatted_sources}")  # Debug log
         return jsonify({'sources': formatted_sources})
     except Exception as e:
-        print(f"Erreur lors de la r��cupération des sources VBAN: {str(e)}")  # Debug log
+        print(f"Erreur lors de la rcupération des sources VBAN: {str(e)}")  # Debug log
         return jsonify({'error': str(e)}), 400
 
 @app.route('/clap_detected')  # Added route for clap detection
@@ -881,8 +869,12 @@ def get_vban_sources():
 def get_saved_vban_sources():
     try:
         settings = load_settings()
-        return jsonify(settings.get('saved_vban_sources', []))
+        saved_sources = settings.get('saved_vban_sources', [])
+        print(f"Sources VBAN sauvegardées trouvées: {len(saved_sources)}")  # Debug log
+        print(f"Sources: {saved_sources}")  # Debug log
+        return jsonify(saved_sources)
     except Exception as e:
+        print(f"Erreur lors de la récupération des sources VBAN sauvegardées: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/settings/save', methods=['POST'])

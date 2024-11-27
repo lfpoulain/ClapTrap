@@ -12,10 +12,9 @@ export function initVbanSources() {
         });
     }
 
-    // Charger les sources initiales une seule fois
+    // Charger les sources initiales
     refreshVbanSources();
-    // Supprimer le rafraîchissement périodique
-    // setInterval(refreshVbanSources, 10000);
+    refreshSavedVbanSources();  // Charger aussi les sources sauvegardées au démarrage
 }
 
 export function refreshVbanSources() {
@@ -88,6 +87,97 @@ export function refreshVbanSources() {
         });
 }
 
+export function refreshSavedVbanSources() {
+    const savedSourcesContainer = document.getElementById('savedVBANSources');
+    if (!savedSourcesContainer) {
+        console.error('Container savedVBANSources non trouvé');
+        return;
+    }
+
+    fetch('/api/vban/saved-sources')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(sources => {
+            console.log('Sources VBAN sauvegardées:', sources);
+            savedSourcesContainer.innerHTML = '';
+
+            if (!Array.isArray(sources) || sources.length === 0) {
+                savedSourcesContainer.innerHTML = `
+                    <div class="list-group-item text-muted">Aucune source VBAN configurée</div>
+                `;
+                return;
+            }
+
+            const template = document.getElementById('vbanSavedSourceTemplate');
+            if (!template) {
+                throw new Error('Template vbanSavedSourceTemplate non trouvé');
+            }
+
+            sources.forEach(source => {
+                const clone = template.content.cloneNode(true);
+                
+                clone.querySelector('.source-name').textContent = source.name;
+                clone.querySelector('.source-ip').textContent = source.ip;
+                clone.querySelector('.source-port').textContent = source.port;
+                
+                const webhookInput = clone.querySelector('.webhook-url');
+                if (webhookInput) {
+                    webhookInput.value = source.webhook_url || '';
+                }
+                
+                const enabledSwitch = clone.querySelector('.source-enabled');
+                if (enabledSwitch) {
+                    enabledSwitch.checked = source.enabled !== false;
+                }
+                
+                const removeButton = clone.querySelector('.remove-vban-btn');
+                if (removeButton) {
+                    removeButton.addEventListener('click', () => removeVBANSource(source));
+                }
+
+                savedSourcesContainer.appendChild(clone);
+            });
+        })
+        .catch(error => {
+            console.error('Erreur lors de la récupération des sources VBAN sauvegardées:', error);
+            savedSourcesContainer.innerHTML = `
+                <div class="list-group-item text-danger">
+                    Erreur lors de la récupération des sources VBAN configurées: ${error.message}
+                </div>
+            `;
+        });
+}
+
+function removeVBANSource(source) {
+    fetch('/api/vban/remove', {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            ip: source.ip,
+            stream_name: source.stream_name || source.name
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess('Source VBAN supprimée avec succès');
+            refreshSavedVbanSources();
+        } else {
+            throw new Error(data.error || 'Erreur lors de la suppression de la source');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur lors de la suppression de la source VBAN:', error);
+        showError(error.message);
+    });
+}
+
 function saveVBANSource(source) {
     fetch('/api/vban/save', {
         method: 'POST',
@@ -101,6 +191,7 @@ function saveVBANSource(source) {
         if (data.success) {
             showSuccess('Source VBAN ajoutée avec succès');
             refreshVbanSources();
+            refreshSavedVbanSources();  // Rafraîchir aussi la liste des sources sauvegardées
         } else {
             throw new Error(data.error || 'Erreur lors de l\'ajout de la source');
         }
