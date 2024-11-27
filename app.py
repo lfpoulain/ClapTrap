@@ -27,9 +27,55 @@ SETTINGS_TEMP = os.path.join(BASE_DIR, 'settings.json.tmp')
 # Variable globale pour le détecteur
 detector = None
 
-# Créer une instance globale de VBANDiscovery
-vban_discovery = VBANDiscovery()
-vban_discovery.start()  # Démarrer la découverte
+# Instance globale de VBANDiscovery
+vban_discovery = None
+last_vban_init_attempt = 0
+VBAN_INIT_RETRY_DELAY = 5  # secondes
+
+def init_vban_discovery():
+    global vban_discovery, last_vban_init_attempt
+    current_time = time.time()
+    
+    # Vérifier si nous devons attendre avant de réessayer
+    if current_time - last_vban_init_attempt < VBAN_INIT_RETRY_DELAY:
+        print(f"Attente avant nouvelle tentative d'initialisation VBAN ({VBAN_INIT_RETRY_DELAY - (current_time - last_vban_init_attempt):.1f}s)")
+        return False
+        
+    last_vban_init_attempt = current_time
+    
+    if vban_discovery:
+        try:
+            vban_discovery.stop()
+        except:
+            pass
+            
+    try:
+        vban_discovery = VBANDiscovery()
+        vban_discovery.start()
+        return True
+    except Exception as e:
+        print(f"Erreur lors de l'initialisation VBAN: {e}")
+        return False
+
+# Initialiser la découverte VBAN
+init_vban_discovery()
+
+@app.before_request
+def before_request():
+    """S'assure que la découverte VBAN est active avant chaque requête"""
+    global vban_discovery
+    if not vban_discovery or not vban_discovery.running:
+        init_vban_discovery()
+
+# Nettoyer lors de l'arrêt
+import atexit
+
+@atexit.register
+def cleanup():
+    """Nettoie les ressources lors de l'arrêt"""
+    global vban_discovery
+    if vban_discovery:
+        vban_discovery.stop()
 
 class VBANSource:
     def __init__(self, name, ip, port, stream_name, webhook_url, enabled=True):
@@ -370,19 +416,11 @@ def test_webhook():
 @app.route('/refresh_vban')
 def refresh_vban():
     try:
-        print("Démarrage de la découverte VBAN...")  # Debug log
-        discovery = VBANDiscovery()
-        discovery.start()
+        print("Récupération des sources VBAN...")  # Debug log
         
-        # Attendre un peu plus longtemps pour la découverte
-        time.sleep(3)
-        
-        # Récupérer les sources
-        sources = discovery.get_active_sources()
+        # Utiliser l'instance globale
+        sources = vban_discovery.get_active_sources()
         print(f"Sources trouvées: {sources}")  # Debug log
-        
-        # Arrêter la découverte
-        discovery.stop()
         
         # Formater les sources pour l'interface
         formatted_sources = []
@@ -399,7 +437,7 @@ def refresh_vban():
         print(f"Sources formatées: {formatted_sources}")  # Debug log
         return jsonify({'sources': formatted_sources})
     except Exception as e:
-        print(f"Erreur lors de la découverte VBAN: {str(e)}")  # Debug log
+        print(f"Erreur lors de la récupération des sources VBAN: {str(e)}")  # Debug log
         return jsonify({'error': str(e)}), 400
 
 @app.route('/clap_detected')  # Added route for clap detection
@@ -787,24 +825,18 @@ def get_rtsp_streams():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/vban/sources')
+@app.route('/api/vban/sources', methods=['GET'])
 def get_vban_sources():
     try:
+        # Utiliser get_active_sources au lieu de scan_once
         sources = vban_discovery.get_active_sources()
-        formatted_sources = []
-        for source in sources:
-            formatted_sources.append({
-                'name': source.stream_name,
-                'ip': source.ip,
-                'port': source.port,
-                'channels': source.channels,
-                'sample_rate': source.sample_rate,
-                'id': f'vban_{source.ip}_{source.port}'
-            })
+        print(f"Sources VBAN actives trouvées: {len(sources)}")  # Debug log
+        formatted_sources = [source.to_dict() for source in sources]
+        print(f"Sources formatées: {formatted_sources}")  # Debug log
         return jsonify(formatted_sources)
     except Exception as e:
         print(f"Erreur lors de la récupération des sources VBAN: {str(e)}")  # Debug log
-        return jsonify({'error': str(e)}), 400
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/vban/saved-sources', methods=['GET'])
 def get_saved_vban_sources():
@@ -830,13 +862,12 @@ def save_settings_api():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
-def cleanup():
-    """Fonction de nettoyage à l'arrêt de l'application"""
-    if vban_discovery:
-        vban_discovery.stop()
-
 if __name__ == '__main__':
     try:
-        socketio.run(app, debug=True, port=16045, allow_unsafe_werkzeug=True)
-    finally:
+        # Désactiver le mode debug
+        socketio.run(app, host='127.0.0.1', port=16045, debug=False)
+    except KeyboardInterrupt:
+        cleanup()
+    except Exception as e:
+        print(f"Erreur lors du démarrage du serveur: {e}")
         cleanup()

@@ -1,3 +1,5 @@
+import { showNotification, showSuccess, showError } from './notifications.js';
+
 export function initializeSocketIO() {
     const socket = io.connect('http://' + document.domain + ':16045', {
         transports: ['websocket', 'polling']
@@ -5,14 +7,14 @@ export function initializeSocketIO() {
 
     socket.on('connect', () => {
         console.log('Connecté au serveur Socket.IO');
-        showNotification('Connecté au serveur', 'success');
+        showSuccess('Connecté au serveur');
     });
 
     socket.on('connect_error', (error) => {
         console.error('Erreur de connexion Socket.IO:', error);
         const startButton = document.getElementById('startButton');
         if (startButton && startButton.style.display !== 'inline-flex') {
-            showNotification('Erreur de connexion au serveur', 'error');
+            showError('Erreur de connexion au serveur');
         }
     });
 
