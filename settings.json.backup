@@ -9,8 +9,25 @@
         "audio_source": "Camo Microphone",
         "device_id": "11"
     },
-    "rtsp_sources": [],
-    "saved_vban_sources": [],
+    "rtsp_sources": [
+        {
+            "id": "9d227f34-f50c-48ea-81a1-6059bacc1052",
+            "name": "dqfsdfs",
+            "url": "sdfsdfds",
+            "webhook_url": "sdfsdfdsfds",
+            "enabled": true
+        }
+    ],
+    "saved_vban_sources": [
+        {
+            "name": "Talkie",
+            "ip": "192.168.68.75",
+            "port": 6980,
+            "stream_name": "Talkie",
+            "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
+            "enabled": true
+        }
+    ],
     "vban": {
         "stream_name": "",
         "ip": "0.0.0.0",
