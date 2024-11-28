@@ -221,7 +221,7 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
             detector.start_listening()
         else:
             logging.info("Microphone")
-            record = sd.InputStream(samplerate=sample_rate, channels=num_channels)
+            record = sd.InputStream(samplerate=sample_rate, channels=num_channels, device=int(settings['microphone']['device_index']))
             record.start()
 
         while detection_running:
@@ -267,20 +267,20 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
                         logging.info("CLAP")
                         try:
                             # Émettre l'événement avec plus d'informations
-                            print("🔔 Émission de l'événement clap")
+                            print(" Émission de l'événement clap")
                             socketio.emit('clap', {
                                 'source_id': 'microphone',
                                 'timestamp': time.time(),
                                 'score': float(score_sum)
                             }, namespace='/')  # Spécifier le namespace
-                            print("✅ Événement clap émis")
+                            print(" Événement clap émis")
                             
                             # Appel webhook si configuré
                             if webhook_url:
                                 response = requests.post(webhook_url)
                                 logging.info(f"Webhook microphone appelé: {response.status_code}")
                         except Exception as e:
-                            print(f"❌ Erreur lors de l'émission de l'événement clap: {str(e)}")
+                            print(f" Erreur lors de l'émission de l'événement clap: {str(e)}")
                             
                         last_clap_time = current_time
                 classification_result_list.clear()

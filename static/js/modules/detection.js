@@ -16,7 +16,18 @@ export async function startDetection() {
         console.log('💾 Paramètres sauvegardés avec succès');
 
         const settings = getCurrentSettings();
-        const response = await callApi('/api/detection/start', 'POST', settings);
+        
+        // Filtrer les sources actives uniquement
+        const activeSettings = {
+            ...settings,
+            microphone: settings.microphone.enabled ? settings.microphone : null,
+            saved_vban_sources: settings.saved_vban_sources.filter(source => source.enabled),
+            rtsp_sources: settings.rtsp_sources.filter(source => source.enabled)
+        };
+
+        console.log('🎯 Démarrage de la détection avec les sources actives:', activeSettings);
+        const response = await callApi('/api/detection/start', 'POST', activeSettings);
+        
         if (response.success) {
             isDetecting = true;
             updateDetectionUI(true);
