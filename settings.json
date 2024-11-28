@@ -1,37 +1,20 @@
 {
     "global": {
-        "threshold": "0.2",
+        "threshold": "0.5",
         "delay": "1.0"
     },
     "microphone": {
         "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
         "enabled": true,
-        "audio_source": "Microphone iMac",
-        "device_index": "9"
+        "audio_source": "Microphone de \u00ab\u00a0iPhone\u00a0\u00bb",
+        "device_index": "0"
     },
     "rtsp_sources": [
         {
-            "id": "8f9ce53c-3f10-4111-a387-649a251b2557",
-            "name": "TOTO",
-            "url": "rtsp://toto.com/flux",
-            "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvVzzzzz",
-            "enabled": true
-        },
-        {
-            "id": "c7c74f68-a47c-4f56-b0bb-a75aa2ea757e",
-            "name": "TITI",
-            "url": "rtsp://titi.com/korben",
-            "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
-            "enabled": true
-        }
-    ],
-    "saved_vban_sources": [
-        {
-            "name": "Talkie",
-            "ip": "192.168.68.75",
-            "port": 6980,
-            "stream_name": "Talkie",
-            "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
+            "id": "2d644d53-ec43-4fc6-813b-c5ef8dcf67ec",
+            "name": "dfds",
+            "url": "sdfdsf",
+            "webhook_url": "sdfsf",
             "enabled": true
         }
     ],
@@ -41,5 +24,15 @@
         "port": 6980,
         "webhook_url": "",
         "enabled": false
-    }
+    },
+    "saved_vban_sources": [
+        {
+            "name": "Talkie",
+            "ip": "192.168.68.75",
+            "port": 6980,
+            "stream_name": "Talkie",
+            "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
+            "enabled": true
+        }
+    ]
 }

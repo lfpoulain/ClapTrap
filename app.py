@@ -202,7 +202,6 @@ def load_flux():
     except FileNotFoundError:
         return {"audio_streams": []}
 
-
 def load_settings():
     """Charge les paramètres avec gestion d'erreurs améliorée"""
     default_settings = {
@@ -217,6 +216,7 @@ def load_settings():
             "enabled": False
         },
         "rtsp_sources": [],
+        "saved_vban_sources": [],
         "vban": {
             "stream_name": "",
             "ip": "0.0.0.0",
@@ -231,19 +231,19 @@ def load_settings():
             with open(SETTINGS_FILE, 'r') as f:
                 settings = json.load(f)
                 
-            # Fusionner avec les paramètres par défaut pour s'assurer que toutes les clés existent
-            merged_settings = default_settings.copy()
-            merged_settings.update(settings)
-            
-            # S'assurer que la section microphone contient audio_source
-            if 'audio_source' not in merged_settings['microphone']:
-                merged_settings['microphone']['audio_source'] = default_settings['microphone']['audio_source']
+            # Fusionner récursivement les paramètres par défaut avec les paramètres sauvegardés
+            def deep_merge(default, saved):
+                merged = default.copy()
+                for key, value in saved.items():
+                    if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
+                        merged[key] = deep_merge(merged[key], value)
+                    else:
+                        merged[key] = value
+                return merged
                 
-            # Sauvegarder les paramètres fusionnés
-            with open(SETTINGS_FILE, 'w') as f:
-                json.dump(merged_settings, f, indent=4)
-                
+            merged_settings = deep_merge(default_settings, settings)
             return merged_settings
+            
     except Exception as e:
         print(f"Erreur lors du chargement des paramètres: {str(e)}")
         
