@@ -69,33 +69,28 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
              > Sources VBAN détectées (actuellement émettant)
              > Sources VBAN sauvegardées (configuration permanente)
            - Ajouter un bouton "+" à côté de chaque source détectée [OK]
-           - Ajouter un bouton "-" à côté de chaque source sauvegardée
-           - Ajouter un champ webhook_url pour chaque source sauvegardée
-           - Ajouter un switch enabled/disabled pour chaque source sauvegardée
+           - Ajouter un bouton "-" à côté de chaque source sauvegardée [OK]
+           - Ajouter un champ webhook_url pour chaque source sauvegardée [OK]
+           - Ajouter un switch enabled/disabled pour chaque source sauvegardée [OK]
          
          * Backend [TODO]
-           - Créer une route POST /api/vban/save pour sauvegarder une nouvelle source
-           - Créer une route DELETE /api/vban/remove pour supprimer une source
-           - Créer une route PUT /api/vban/update pour mettre à jour les paramètres
-           - Implémenter la persistance dans settings.json
+           - Créer une route POST /api/vban/save pour sauvegarder une nouvelle source [OK]
+           - Créer une route DELETE /api/vban/remove pour supprimer une source [OK]
+           - Créer une route PUT /api/vban/update pour mettre à jour les paramètres [OK]
+           - Implémenter la persistance dans settings.json [OK]
            - Gérer la validation des données
          
          * Tests et validation [TODO]
-           - Tester l'ajout d'une nouvelle source
-           - Tester la suppression d'une source
-           - Tester la mise à jour des paramètres
-           - Vérifier la persistance après redémarrage
-           - Valider la gestion des doublons
+           - Tester l'ajout d'une nouvelle source [OK]
+           - Tester la suppression d'une source [OK]
+           - Tester la mise à jour des paramètres [OK]
+           - Vérifier la persistance après redémarrage [OK]
+           - Valider la gestion des doublons [OK]
          
-         * Documentation [TODO]
-           - Documenter le nouveau format de settings.json
-           - Mettre à jour la documentation utilisateur
-           - Documenter les nouvelles routes API
-           - Ajouter des exemples d'utilisation
      * Section RTSP
-       + Ajouter un champ webhook pour chaque flux RTSP
-       + Permettre l'ajout/suppression des flux
-       + Afficher le statut de connexion pour chaque flux
+       + Ajouter un champ webhook pour chaque flux RTSP [OK]
+       + Permettre l'ajout/suppression des flux [OK]
+       + Afficher le statut de connexion pour chaque flux [OK]
    - Ajouter une validation basique du format URL
    - Ajouter une icône ou un bouton de test du webhook
    - Ajouter des tooltips explicatifs sur le format attendu
