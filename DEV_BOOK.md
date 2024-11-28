@@ -108,3 +108,34 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
    - Tester les appels webhook avec différents scénarios [OK]
    - Valider la gestion des erreurs [OK]
    - Tester la performance avec plusieurs webhooks actifs [OK]
+
+## Plan d'action pour la détection des claps VBAN
+
+1. Préparation de l'infrastructure audio [TODO]
+   - Créer une classe `VBANAudioProcessor` pour gérer le traitement audio des flux VBAN
+   - Implémenter la réception et le décodage du flux audio VBAN en temps réel
+   - Mettre en place un buffer circulaire pour stocker les échantillons audio
+
+2. Implémentation de la détection [TODO]
+   - Adapter l'algorithme de détection des claps existant (celui utilisé pour le micro)
+   - Implémenter le traitement du signal audio :
+     * Filtrage du signal
+     * Détection des pics d'amplitude
+     * Analyse des caractéristiques temporelles et fréquentielles
+   - Ajouter des seuils de détection configurables
+
+3. Intégration dans l'architecture existante [TODO]
+   - Créer un gestionnaire de détection pour chaque source VBAN active
+   - Intégrer la détection dans la boucle principale de traitement
+   - Implémenter la gestion des événements de détection
+
+4. Interface utilisateur [TODO]
+   - Ajouter des indicateurs visuels de détection pour chaque source VBAN
+   - Implémenter un retour visuel lors de la détection d'un clap
+   - Ajouter des contrôles pour ajuster les paramètres de détection
+
+5. Tests et validation [TODO]
+   - Tester la détection avec différentes sources VBAN
+   - Valider la précision de la détection
+   - Optimiser les performances et la latence
+   - Tester la robustesse face aux faux positifs
