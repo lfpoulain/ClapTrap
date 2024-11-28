@@ -26,7 +26,8 @@
             "port": 6980,
             "stream_name": "Talkie",
             "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
-            "enabled": true
+            "enabled": true,
+            "testButton": "<button class=\"btn btn-sm btn-outline-primary test-webhook\" data-source=\"vban-Talkie\" type=\"button\">Tester</button>"
         }
     ],
     "vban": {

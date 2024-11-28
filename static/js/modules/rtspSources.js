@@ -35,13 +35,12 @@ function setupRtspStreams() {
 
 function createStreamElement(stream) {
     const div = document.createElement('div');
-    div.className = 'webhook-card mb-3';
+    div.className = 'list-group-item';
     div.innerHTML = `
-        <div class="webhook-header">
-            <h4>
-                <span class="webhook-icon">📹</span>
-                ${stream.name || 'Flux RTSP'}
-            </h4>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong>${stream.name || 'Flux RTSP'}</strong>
+            </div>
             <div class="source-controls">
                 <label class="switch" title="Activer/Désactiver le flux">
                     <input type="checkbox" class="stream-enabled" data-id="${stream.id}" ${stream.enabled ? 'checked' : ''}>
@@ -52,26 +51,24 @@ function createStreamElement(stream) {
                 </button>
             </div>
         </div>
-        <div class="webhook-content">
-            <div class="webhook-input-group mb-3">
-                <label class="form-label">URL RTSP</label>
-                <input type="url" class="webhook-input rtsp-url" 
-                       value="${stream.url}" 
+        <div class="webhook-input-group mt-2">
+            <label class="form-label">URL RTSP</label>
+            <input type="url" class="webhook-input rtsp-url" 
+                   value="${stream.url}" 
+                   data-id="${stream.id}"
+                   placeholder="rtsp://votre-camera:port/flux">
+        </div>
+        <div class="webhook-input-group mt-2">
+            <label class="form-label">URL Webhook</label>
+            <div class="webhook-input-with-test">
+                <input type="url" class="webhook-input webhook-url" 
+                       value="${stream.webhook_url || ''}" 
                        data-id="${stream.id}"
-                       placeholder="rtsp://votre-camera:port/flux">
-            </div>
-            <div class="webhook-input-group">
-                <label class="form-label">URL Webhook</label>
-                <div class="webhook-input-with-test">
-                    <input type="url" class="webhook-input webhook-url" 
-                           value="${stream.webhook_url || ''}" 
-                           data-id="${stream.id}"
-                           placeholder="https://votre-serveur.com/webhook">
-                    <button type="button" class="test-webhook" data-source="rtsp-${stream.id}">
-                        <span class="icon">🔔</span>
-                        Tester
-                    </button>
-                </div>
+                       placeholder="https://votre-serveur.com/webhook">
+                <button type="button" class="test-webhook" data-source="rtsp-${stream.id}">
+                    <span class="icon">🔔</span>
+                    Tester
+                </button>
             </div>
         </div>
     `;
@@ -123,40 +120,37 @@ function setupStreamEventListeners(element, stream) {
 
 function showAddStreamForm() {
     const div = document.createElement('div');
-    div.className = 'webhook-card mb-3';
+    div.className = 'list-group-item';
     div.innerHTML = `
-        <div class="webhook-header">
-            <h4>
-                <span class="webhook-icon">📹</span>
-                Nouveau flux RTSP
-            </h4>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong>Nouveau flux RTSP</strong>
+            </div>
         </div>
-        <div class="webhook-content">
-            <div class="webhook-input-group mb-3">
-                <label class="form-label">Nom</label>
-                <input type="text" class="webhook-input" id="new-stream-name" 
-                       placeholder="Nom du flux">
+        <div class="webhook-input-group mt-2">
+            <label class="form-label">Nom</label>
+            <input type="text" class="webhook-input" id="new-stream-name" 
+                   placeholder="Nom du flux">
+        </div>
+        <div class="webhook-input-group mt-2">
+            <label class="form-label">URL RTSP</label>
+            <input type="url" class="webhook-input" id="new-stream-url" 
+                   placeholder="rtsp://votre-camera:port/flux">
+        </div>
+        <div class="webhook-input-group mt-2">
+            <label class="form-label">URL Webhook</label>
+            <input type="url" class="webhook-input" id="new-stream-webhook" 
+                   placeholder="https://votre-serveur.com/webhook">
+        </div>
+        <div class="webhook-input-group mt-2">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="new-stream-enabled" checked>
+                <label class="form-check-label">Activer</label>
             </div>
-            <div class="webhook-input-group mb-3">
-                <label class="form-label">URL RTSP</label>
-                <input type="url" class="webhook-input" id="new-stream-url" 
-                       placeholder="rtsp://votre-camera:port/flux">
-            </div>
-            <div class="webhook-input-group mb-3">
-                <label class="form-label">URL Webhook</label>
-                <input type="url" class="webhook-input" id="new-stream-webhook" 
-                       placeholder="https://votre-serveur.com/webhook">
-            </div>
-            <div class="webhook-input-group mb-3">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="new-stream-enabled" checked>
-                    <label class="form-check-label">Activer</label>
-                </div>
-            </div>
-            <div class="webhook-actions">
-                <button class="btn btn-primary" id="save-new-stream">Ajouter</button>
-                <button class="btn btn-secondary" id="cancel-new-stream">Annuler</button>
-            </div>
+        </div>
+        <div class="webhook-actions">
+            <button class="btn btn-primary" id="save-new-stream">Ajouter</button>
+            <button class="btn btn-secondary" id="cancel-new-stream">Annuler</button>
         </div>
     `;
 
