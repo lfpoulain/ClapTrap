@@ -6,6 +6,7 @@ import numpy as np
 import sounddevice as sd
 import scipy.signal
 import collections
+import threading
 
 class VBANDetector:
     def __init__(self, port=6980):
@@ -20,47 +21,56 @@ class VBANDetector:
         self.target_sample_rate = 16000  # Taux d'échantillonnage cible
         self.stream = None
         
-    def start_detection(self):
-        """Démarre la détection des sources VBAN"""
+    def start_listening(self):
+        """Démarre l'écoute des flux VBAN"""
         if self._socket:
             try:
                 self._socket.close()
             except:
                 pass
-                
+            
         self.running = True
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._socket.settimeout(0.5)
+        print(f"Démarrage de l'écoute VBAN sur le port {self.port}")
         self._socket.bind(('0.0.0.0', self.port))
         
+        # Démarrer l'écoute dans un thread séparé
+        self._listen_thread = threading.Thread(target=self._listen_loop)
+        self._listen_thread.daemon = True
+        self._listen_thread.start()
+
+    def _listen_loop(self):
+        """Boucle d'écoute des flux VBAN"""
+        print("Thread d'écoute VBAN démarré")
+        logged_sources = set()
         while self.running:
             try:
                 data, addr = self._socket.recvfrom(2048)
-                if len(data) >= 28 and data[0:4] == b'VBAN':
-                    # Extraire les informations du header VBAN
-                    sr_index = data[4] & 0x1F
-                    channels = ((data[4] & 0xE0) >> 5) + 1
-                    name = self.clean_vban_name(data[8:28])
-                    ip = addr[0]
-                    
-                    # Convertir l'index de sample rate en Hz
-                    sample_rates = {
-                        0: 6000, 1: 12000, 2: 24000, 3: 48000, 4: 96000,
-                        5: 192000, 6: 384000, 7: 8000, 8: 16000, 9: 32000,
-                        10: 64000, 11: 128000, 12: 256000, 13: 512000,
-                        14: 11025, 15: 22050, 16: 44100, 17: 88200,
-                        18: 176400, 19: 352800
-                    }
-                    sample_rate = sample_rates.get(sr_index, 44100)
-                    
+                print(f"Reçu {len(data)} octets de {addr[0]}:{addr[1]}")
+                source = self._parse_vban_packet(data, addr, logged_sources)
+                if source:
                     # Extraire les données audio
-                    audio_data = np.frombuffer(data[28:], dtype=np.float32)
+                    audio_data = np.frombuffer(data[28:], dtype=np.int16)
+                    # Convertir en float32 et normaliser entre -1 et 1
+                    audio_data = audio_data.astype(np.float32) / 32768.0
+                    
+                    # Log pour debug
+                    print(f"Reçu {len(audio_data)} échantillons audio de {addr[0]}, min={audio_data.min():.3f}, max={audio_data.max():.3f}")
                     
                     # Rééchantillonner si nécessaire
-                    if sample_rate != self.target_sample_rate:
+                    if source.sample_rate != self.target_sample_rate:
                         audio_data = scipy.signal.resample(audio_data, 
-                            int(len(audio_data) * self.target_sample_rate / sample_rate))
+                            int(len(audio_data) * self.target_sample_rate / source.sample_rate))
+                    
+                    # Convertir en mono si nécessaire
+                    if source.channels > 1:
+                        # S'assurer que la taille des données est divisible par le nombre de canaux
+                        samples_per_channel = len(audio_data) // source.channels
+                        audio_data = audio_data[:samples_per_channel * source.channels]
+                        audio_data = audio_data.reshape(-1, source.channels)
+                        audio_data = np.mean(audio_data, axis=1)
                     
                     # Ajouter au buffer
                     self.buffer.extend(audio_data)
@@ -69,14 +79,15 @@ class VBANDetector:
                     if self.audio_callback and len(self.buffer) >= self.target_sample_rate:
                         audio_chunk = np.array(list(self.buffer)[:self.target_sample_rate])
                         self.buffer.clear()
-                        self.audio_callback(audio_chunk)
+                        current_time = time.time()
+                        self.audio_callback(audio_chunk, current_time)
                     
                     # Mettre à jour les informations de la source
-                    self.sources[ip].update({
+                    self.sources[addr[0]].update({
                         'last_seen': time.time(),
-                        'name': name,
-                        'sample_rate': sample_rate,
-                        'channels': channels
+                        'name': source.name,
+                        'sample_rate': source.sample_rate,
+                        'channels': source.channels
                     })
                     
                     # Appeler le callback source si défini
@@ -93,8 +104,49 @@ class VBANDetector:
                     if self.source_callback:
                         self.source_callback(self.get_active_sources())
                     
-    def stop_detection(self):
-        """Arrête la détection des sources VBAN"""
+    def _parse_vban_packet(self, data, addr, logged_sources=None):
+        """Parse un paquet VBAN et retourne les informations de la source"""
+        try:
+            if len(data) >= 28 and data[0:4] == b'VBAN':
+                # Extraire les informations du header VBAN
+                sr_index = data[4] & 0x1F
+                channels = ((data[4] & 0xE0) >> 5) + 1
+                name = self.clean_vban_name(data[8:28])
+                ip = addr[0]
+                port = addr[1]
+                
+                # Convertir l'index de sample rate en Hz
+                sample_rates = {
+                    0: 6000, 1: 12000, 2: 24000, 3: 48000, 4: 96000,
+                    5: 192000, 6: 384000, 7: 8000, 8: 16000, 9: 32000,
+                    10: 64000, 11: 128000, 12: 256000, 13: 512000,
+                    14: 11025, 15: 22050, 16: 44100, 17: 88200,
+                    18: 176400, 19: 352800
+                }
+                sample_rate = sample_rates.get(sr_index, 44100)
+                
+                # Créer un objet source
+                source = type('VBANSource', (), {
+                    'name': name,
+                    'ip': ip,
+                    'port': port,
+                    'channels': channels,
+                    'sample_rate': sample_rate
+                })
+                
+                # Log si demandé
+                if logged_sources is not None and ip not in logged_sources:
+                    print(f"Paquet VBAN parsé: {name}, {channels} canaux @ {sample_rate}Hz")
+                    logged_sources.add(ip)
+                
+                return source
+                
+        except Exception as e:
+            print(f"Erreur lors du parsing du paquet VBAN: {e}")
+            return None
+
+    def stop_listening(self):
+        """Arrête l'écoute des flux VBAN"""
         self.running = False
         if self._socket:
             self._socket.close()
@@ -133,3 +185,18 @@ class VBANDetector:
             name = name[:-1]
             
         return name
+
+    def cleanup(self):
+        """Arrête l'écoute et nettoie les ressources"""
+        self.running = False
+        if self._socket:
+            try:
+                self._socket.shutdown(socket.SHUT_RDWR)
+                self._socket.close()
+            except:
+                pass
+            self._socket = None
+        
+        # Attendre que le thread d'écoute se termine
+        if hasattr(self, '_listen_thread') and self._listen_thread.is_alive():
+            self._listen_thread.join(timeout=1.0)

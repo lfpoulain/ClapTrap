@@ -1,13 +1,15 @@
 {
     "global": {
         "threshold": "0.2",
-        "delay": "1.0"
+        "delay": "1.0",
+        "chunk_duration": "0.5",
+        "buffer_duration": "1.0"
     },
     "microphone": {
-        "device_index": "4",
-        "audio_source": "Scarlett Solo USB",
-        "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
-        "enabled": true
+        "enabled": false,
+        "webhook_url": "None",
+        "audio_source": "Microphone iMac",
+        "device_index": "9"
     },
     "rtsp_sources": [
         {

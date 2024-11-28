@@ -4,13 +4,12 @@ from classify import start_detection, stop_detection, is_running
 import sounddevice as sd
 import json
 import requests
-from vban_detector import VBANDetector
+from vban_manager import init_vban_detector as init_vban, cleanup_vban_detector
 import threading
 import time
 import os
 from datetime import datetime
 from events import socketio  # Importation de l'instance Socket.IO
-from vban_discovery import VBANDiscovery
 import socket
 import uuid
 from threading import Lock
@@ -36,62 +35,13 @@ SETTINGS_FILE = os.path.join(BASE_DIR, 'settings.json')
 SETTINGS_BACKUP = os.path.join(BASE_DIR, 'settings.json.backup')
 SETTINGS_TEMP = os.path.join(BASE_DIR, 'settings.json.tmp')
 
-# Supposons que tu aies ajouté une fonction is_running() dans live.py pour vérifier si la détection est active
-
-# Variable globale pour le détecteur
-detector = None
-
-# Instance globale de VBANDiscovery
-vban_discovery = None
-last_vban_init_attempt = 0
-VBAN_INIT_RETRY_DELAY = 5  # secondes
-
-def init_vban_discovery():
-    """Initialise la découverte VBAN"""
-    global vban_discovery
-    
-    max_retries = 3
-    retry_delay = 2.3  # secondes
-    
-    for attempt in range(max_retries):
-        try:
-            if vban_discovery is None:
-                vban_discovery = VBANDiscovery()
-            
-            # Créer et configurer le socket
-            if vban_discovery._sock is None:
-                vban_discovery._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                vban_discovery._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                vban_discovery._sock.settimeout(0.5)
-                vban_discovery._sock.bind((vban_discovery.bind_ip, vban_discovery.bind_port))
-                print(f"Socket VBAN initialisé sur {vban_discovery.bind_ip}:{vban_discovery.bind_port}")
-            
-            return True
-            
-        except Exception as e:
-            print(f"Erreur lors de l'initialisation VBAN (tentative {attempt + 1}/{max_retries}): {e}")
-            if attempt < max_retries - 1:
-                print(f"Attente avant nouvelle tentative d'initialisation VBAN ({retry_delay}s)")
-                time.sleep(retry_delay)
-            if vban_discovery and vban_discovery._sock:
-                try:
-                    vban_discovery._sock.close()
-                except:
-                    pass
-                vban_discovery._sock = None
-    
-    print("Échec de l'initialisation VBAN après plusieurs tentatives")
-    return False
-
-# Initialiser la découverte VBAN
-init_vban_discovery()
+# Initialiser le détecteur VBAN
+init_vban()
 
 @app.before_request
 def before_request():
-    """S'assure que la découverte VBAN est active avant chaque requête"""
-    global vban_discovery
-    if not vban_discovery or not vban_discovery.running:
-        init_vban_discovery()
+    """S'assure que le détecteur VBAN est actif avant chaque requête"""
+    init_vban()
 
 # Nettoyer lors de l'arrêt
 import atexit
@@ -99,9 +49,7 @@ import atexit
 @atexit.register
 def cleanup():
     """Nettoie les ressources lors de l'arrêt"""
-    global vban_discovery
-    if vban_discovery:
-        vban_discovery.stop()
+    cleanup_vban_detector()
 
 class VBANSource:
     def __init__(self, name, ip, port, stream_name, webhook_url, enabled=True):
@@ -328,27 +276,84 @@ def verify_settings_saved(new_settings, saved_settings):
 def start_detection_route():
     try:
         settings = request.json
+        if not settings:
+            return jsonify({'error': 'Aucun paramètre fourni'}), 400
+            
+        # Vérifier la présence des sections requises et initialiser avec des valeurs par défaut si nécessaire
+        if 'global' not in settings or settings['global'] is None:
+            settings['global'] = {'threshold': '0.2', 'delay': '1.0'}
+            
+        if 'microphone' not in settings or settings['microphone'] is None:
+            settings['microphone'] = {
+                'enabled': False,
+                'webhook_url': None,
+                'audio_source': None,
+                'device_index': '0'
+            }
+            
         # Sauvegarder les paramètres
         success, message = save_settings(settings)
         if not success:
             return jsonify({'error': message}), 400
             
         # Vérifier si le microphone est activé
-        if not settings.get('microphone', {}).get('enabled', False):
+        microphone_enabled = settings.get('microphone', {})
+        if isinstance(microphone_enabled, dict):
+            microphone_enabled = microphone_enabled.get('enabled', False)
+        else:
+            microphone_enabled = False
+            
+        if not microphone_enabled:
             print("Microphone désactivé - aucune capture audio ne sera effectuée")
             
-        # Préparer les paramètres pour start_detection
-        detection_params = {
-            'model': "yamnet.tflite",
-            'max_results': 5,
-            'score_threshold': float(settings['global']['threshold']),
-            'overlapping_factor': 0.8,
-            'socketio': socketio,
-            'webhook_url': settings['microphone'].get('webhook_url') if settings['microphone'].get('enabled') else None,
-            'delay': float(settings['global']['delay']),
-            'audio_source': settings['microphone'].get('audio_source') if settings['microphone'].get('enabled') else None,
-            'rtsp_url': None
-        }
+        # Préparer les paramètres pour start_detection avec gestion des valeurs null
+        try:
+            global_settings = settings.get('global', {})
+            if not isinstance(global_settings, dict):
+                global_settings = {}
+                
+            microphone_settings = settings.get('microphone', {})
+            if not isinstance(microphone_settings, dict):
+                microphone_settings = {}
+                
+            detection_params = {
+                'model': "yamnet.tflite",
+                'max_results': 5,
+                'score_threshold': float(global_settings.get('threshold', '0.2')),
+                'overlapping_factor': 0.8,
+                'socketio': socketio,
+                'webhook_url': microphone_settings.get('webhook_url') if microphone_enabled else None,
+                'delay': float(global_settings.get('delay', '1.0')),
+                'audio_source': microphone_settings.get('audio_source') if microphone_enabled else None,
+                'rtsp_url': None
+            }
+
+            # Check for VBAN sources if microphone is disabled
+            if not microphone_enabled:
+                # Vérifier d'abord saved_vban_sources
+                saved_vban_sources = settings.get('saved_vban_sources', [])
+                if saved_vban_sources:
+                    # Utiliser la première source VBAN active
+                    for source in saved_vban_sources:
+                        if source.get('enabled', True):  # Si enabled n'est pas spécifié, on considère la source comme active
+                            detection_params['audio_source'] = f"vban://{source['ip']}"
+                            logging.info(f"Utilisation de la source VBAN: {source['name']} ({source['ip']})")
+                            break
+                    else:
+                        logging.error("Aucune source VBAN active trouvée")
+                        return jsonify({'error': 'Aucune source VBAN active trouvée'}), 400
+                else:
+                    # Vérifier ensuite vban_sources pour la rétrocompatibilité
+                    vban_sources = settings.get('vban_sources', [])
+                    if vban_sources:
+                        detection_params['audio_source'] = f"vban://{vban_sources[0]['ip']}"
+                        logging.info(f"Utilisation de la source VBAN: {vban_sources[0].get('name', 'Unknown')} ({vban_sources[0]['ip']})")
+                    else:
+                        logging.error("Aucune source audio VBAN spécifiée")
+                        return jsonify({'error': 'Aucune source audio VBAN spécifiée'}), 400
+
+        except (ValueError, TypeError) as e:
+            return jsonify({'error': f'Erreur dans les paramètres : {str(e)}'}), 400
         
         # Démarrer la détection
         if start_detection(**detection_params):
@@ -392,19 +397,18 @@ def test_webhook():
             'test': True
         }
 
-        # Utiliser le WebhookManager pour envoyer la requête
-        webhook_manager = WebhookManager()
-        response = webhook_manager.send_webhook(url, test_data)
-
-        if response and response.ok:
+        try:
+            # Utiliser le WebhookManager pour envoyer la requête
+            webhook_manager = WebhookManager()
+            response = webhook_manager.send_webhook(url, test_data)
             return jsonify({'success': True, 'message': 'Test réussi'})
-        else:
-            status_code = response.status_code if response else 500
-            error_message = response.text if response else 'Échec de la requête webhook'
-            return jsonify({'error': f'Échec du test: {status_code} - {error_message}'}), status_code
+            
+        except requests.exceptions.RequestException as e:
+            error_message = str(e)
+            if hasattr(e.response, 'text'):
+                error_message = f"{error_message}: {e.response.text}"
+            return jsonify({'error': f'Échec du test: {error_message}'}), 500
 
-    except requests.exceptions.RequestException as e:
-        return jsonify({'error': f'Erreur de connexion: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': f'Erreur: {str(e)}'}), 500
 
@@ -414,7 +418,7 @@ def refresh_vban():
         print("Récupération des sources VBAN...")  # Debug log
         
         # Utiliser l'instance globale
-        sources = vban_discovery.get_active_sources()
+        sources = init_vban().get_active_sources()
         print(f"Sources trouvées: {sources}")  # Debug log
         
         # Formater les sources pour l'interface
@@ -450,19 +454,17 @@ def status():
 
 @app.route('/refresh_vban_sources')
 def refresh_vban_sources():
-    detector = VBANDetector.get_instance()
-    
     # Make sure the detector is running
-    if not detector.running:
+    if not init_vban().running:
         # Start listening in a separate thread
-        thread = threading.Thread(target=detector.start_listening)
+        thread = threading.Thread(target=init_vban().start_listening)
         thread.daemon = True
         thread.start()
         
         # Give it a moment to detect sources
         time.sleep(2)
     
-    active_sources = detector.get_active_sources()
+    active_sources = init_vban().get_active_sources()
     
     vban_sources = []
     for ip, info in active_sources.items():
@@ -474,8 +476,8 @@ def refresh_vban_sources():
             })
     
     # Stop the detector if we started it just for the refresh
-    if not detector.running:
-        detector.stop_listening()
+    if not init_vban().running:
+        init_vban().stop_listening()
     
     return jsonify({"sources": vban_sources})
 
@@ -901,7 +903,7 @@ def delete_rtsp_stream(stream_id):
 def get_vban_sources():
     try:
         # S'assurer que la découverte VBAN est initialisée
-        if not init_vban_discovery():
+        if not init_vban():
             return jsonify({'error': 'Impossible d\'initialiser la découverte VBAN'}), 500
             
         # Effectuer un scan rapide
@@ -912,9 +914,9 @@ def get_vban_sources():
         try:
             while time.time() - start_time < 1.0:  # Scan pendant 1 seconde
                 try:
-                    data, addr = vban_discovery._sock.recvfrom(2048)
+                    data, addr = init_vban()._sock.recvfrom(2048)
                     if len(data) >= 4 and data[:4] == b'VBAN':
-                        source = vban_discovery._parse_vban_packet(data, addr, logged_sources)
+                        source = init_vban()._parse_vban_packet(data, addr, logged_sources)
                         if source:
                             source_key = f"{source.ip}:{source.port}"
                             # Éviter les doublons
@@ -1040,13 +1042,14 @@ class WebhookManager:
         self.session.mount('https://', HTTPAdapter(max_retries=retry_strategy))
     
     def send_webhook(self, url, data):
+        """Envoie une requête webhook et retourne la réponse"""
         try:
             response = self.session.post(url, json=data, timeout=5)
             response.raise_for_status()
-            return True
+            return response
         except requests.exceptions.RequestException as e:
             logging.error(f"Webhook failed: {str(e)}")
-            return False
+            raise
 
 @socketio.on('connect')
 def handle_connect():
@@ -1066,7 +1069,7 @@ if __name__ == '__main__':
         # Désactiver le mode debug
         socketio.run(app, host='127.0.0.1', port=16045, debug=False)
     except KeyboardInterrupt:
-        cleanup()
+        cleanup_vban_detector()
     except Exception as e:
         print(f"Erreur lors du démarrage du serveur: {e}")
-        cleanup()
+        cleanup_vban_detector()
