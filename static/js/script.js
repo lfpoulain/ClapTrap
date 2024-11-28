@@ -61,6 +61,16 @@ let detectionActive = false;
 
 async function toggleDetection() {
     try {
+        // Si on démarre la détection, on sauvegarde d'abord les paramètres
+        if (!detectionActive) {
+            console.log('💾 Tentative de sauvegarde des paramètres...');
+            const saved = await saveSettings();
+            console.log('💾 Résultat de la sauvegarde:', saved);
+            if (!saved) {
+                throw new Error('Failed to save settings');
+            }
+        }
+
         const response = await fetch('/api/detection/toggle', {
             method: 'POST'
         });

@@ -1,12 +1,20 @@
 import { callApi } from './api.js';
 import { showError, showSuccess } from './utils.js';
-import { getCurrentSettings } from './settings.js';
+import { getCurrentSettings, saveSettings } from './settings.js';
 
 let socket = io();
 let isDetecting = false;
 
 export async function startDetection() {
     try {
+        // Sauvegarder les paramètres avant de démarrer la détection
+        console.log('💾 Sauvegarde des paramètres avant démarrage...');
+        const saved = await saveSettings();
+        if (!saved) {
+            throw new Error('Failed to save settings');
+        }
+        console.log('💾 Paramètres sauvegardés avec succès');
+
         const settings = getCurrentSettings();
         const response = await callApi('/api/detection/start', 'POST', settings);
         if (response.success) {

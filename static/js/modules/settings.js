@@ -131,19 +131,23 @@ export function initSettings(initialSettings) {
 export async function saveSettings() {
     try {
         // Synchroniser avec les valeurs de l'interface
+        console.log('📝 Début de la sauvegarde des paramètres');
         const updatedSettings = syncWithDOM();
-        console.log(' Paramètres synchronisés avec l\'interface:', updatedSettings);
+        console.log('📝 Paramètres synchronisés avec l\'interface:', updatedSettings);
 
         // Valider les paramètres avant la sauvegarde
         const { settings, errors, isValid } = validateSettings(updatedSettings);
+        console.log('📝 Validation des paramètres:', { isValid, errors });
         if (!isValid) {
-            console.warn(' Problèmes détectés avant la sauvegarde:', errors);
+            console.warn('⚠️ Problèmes détectés avant la sauvegarde:', errors);
             showError('Certains paramètres sont invalides ou manquants');
             return false;
         }
 
         // Sauvegarder les paramètres validés
+        console.log('📝 Envoi des paramètres à l\'API...');
         const response = await callApi('/api/settings/save', 'POST', settings);
+        console.log('📝 Réponse de l\'API:', response);
         if (response.success) {
             currentSettings = settings;
             showSuccess('Paramètres sauvegardés');
@@ -151,6 +155,7 @@ export async function saveSettings() {
         }
         return false;
     } catch (error) {
+        console.error('❌ Erreur lors de la sauvegarde:', error);
         showError('Erreur lors de la sauvegarde des paramètres');
         return false;
     }
