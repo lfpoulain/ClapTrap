@@ -186,17 +186,29 @@ select {
 .webhook-input {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid var(--border-color);
+    border: 1px solid #dee2e6;
     border-radius: 4px;
-    background-color: var(--input-bg);
-    color: var(--text-color);
+    background-color: white;
+    color: #333;
     font-size: 14px;
+    line-height: 1.5;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    appearance: textfield;
 }
 
 .webhook-input:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.2);
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.webhook-input:hover {
+    border-color: #adb5bd;
+}
+
+.webhook-input::placeholder {
+    color: #6c757d;
+    opacity: 0.8;
 }
 
 .webhook-input-with-test {
