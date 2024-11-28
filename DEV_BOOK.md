@@ -12,8 +12,9 @@ Listing des sources RTSP via un fichier de configuration settings.json [OK]
 Détection des claps à partir du son capté par le micro [OK]
 Détection des claps à partir du son capté par la source RTSP [OK]
 Détection des claps à partir du son capté par la source VBAN
-Intégration dans l'interface d'un moyen d'associer un webhook pour chaque source (micro, RTSP, VBAN)
-Enregistrement automatique des paramètres quand on clique sur "Démarrer la détection" sans avoir à cliquer sur le bouton "enregistrer les paramètres" [OK]
+Intégration dans l'interface d'un moyen d'associer un webhook pour chaque source (micro, RTSP, VBAN) [OK]
+Enregistrement automatique des paramètres quand on clique sur "Démarrer la détection" sans avoir à cliquer sur le bouton
+"enregistrer les paramètres" [OK]
 
 ## Plan d'action pour l'enregistrement automatique des paramètres
 
@@ -91,34 +92,19 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
        + Ajouter un champ webhook pour chaque flux RTSP [OK]
        + Permettre l'ajout/suppression des flux [OK]
        + Afficher le statut de connexion pour chaque flux [OK]
-   - Ajouter une validation basique du format URL
-   - Ajouter une icône ou un bouton de test du webhook
-   - Ajouter des tooltips explicatifs sur le format attendu
-   - Griser les éléments quand la détection est lancée.
+   - Ajouter une validation basique du format URL [OK]
+   - Ajouter une icône ou un bouton de test du webhook [OK]
 
 3. Implémentation du backend
-   - Créer une fonction de validation des URLs webhook
-   - Implémenter la sauvegarde des webhooks dans settings.json
-   - Développer la logique d'appel des webhooks lors de la détection
-   - Ajouter une route API pour tester les webhooks
-   - Gérer les timeouts et les erreurs d'appel webhook
+   - Créer une fonction de validation des URLs webhook [OK]
+   - Implémenter la sauvegarde des webhooks dans settings.json [OK]
+   - Développer la logique d'appel des webhooks lors de la détection [OK]
+   - Ajouter une route API pour tester les webhooks [OK]
+   - Gérer les timeouts et les erreurs d'appel webhook 
 
 4. Tests et validation
-   - Tester la sauvegarde et le chargement des webhooks
-   - Vérifier la validation des URLs
-   - Tester les appels webhook avec différents scénarios
-   - Valider la gestion des erreurs
-   - Tester la performance avec plusieurs webhooks actifs
-
-5. Documentation
-   - Documenter le format des requêtes webhook
-   - Mettre à jour la documentation utilisateur
-   - Ajouter des exemples d'intégration
-   - Documenter les codes d'erreur possibles
-   - Mettre à jour les commentaires dans le code
-
-6. Déploiement et monitoring
-   - Ajouter des logs pour les appels webhook
-   - Mettre en place un système de retry en cas d'échec
-   - Implémenter des métriques de succès/échec
-   - Prévoir un mécanisme de désactivation d'urgence
+   - Tester la sauvegarde et le chargement des webhooks [OK]
+   - Vérifier la validation des URLs [OK]
+   - Tester les appels webhook avec différents scénarios [OK]
+   - Valider la gestion des erreurs [OK]
+   - Tester la performance avec plusieurs webhooks actifs [OK]
