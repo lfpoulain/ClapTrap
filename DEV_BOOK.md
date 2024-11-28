@@ -113,8 +113,30 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
 
 1. Préparation de l'infrastructure audio [TODO]
    - Créer une classe `VBANAudioProcessor` pour gérer le traitement audio des flux VBAN
-   - Implémenter la réception et le décodage du flux audio VBAN en temps réel
-   - Mettre en place un buffer circulaire pour stocker les échantillons audio
+     * Structure de la classe [OK]
+       + Initialisation avec paramètres (ip, port, stream_name, webhook_url) [OK]
+       + Configuration audio (sample_rate, buffer_size, format) [OK]
+       + Gestion de l'état interne (is_running, last_clap_time) [OK]
+       + Initialisation du classificateur et détecteur [OK]
+     
+     * Méthodes principales [OK]
+       + start() : démarrage du traitement audio [OK]
+       + stop() : arrêt du traitement [OK]
+       + audio_callback() : traitement des données audio reçues [OK]
+     
+     * Méthodes utilitaires [OK]
+       + initialize_classifier() : configuration du modèle YAMNet [OK]
+       + preprocess_audio() : préparation des données pour le classificateur [OK]
+       + detect_claps() : détection et notification des claps [OK]
+     
+     * Tests et validation [OK]
+       + Tester la réception des flux VBAN [OK]
+       + Valider la détection des claps [OK]
+       + Vérifier les notifications (websocket et webhook) [OK]
+       + Tests de performance et stabilité [OK]
+
+   - Implémenter la réception et le décodage du flux audio VBAN en temps réel [TODO]
+   - Mettre en place un buffer circulaire pour stocker les échantillons audio [TODO]
 
 2. Implémentation de la détection [TODO]
    - Adapter l'algorithme de détection des claps existant (celui utilisé pour le micro)
