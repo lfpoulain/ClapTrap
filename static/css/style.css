@@ -905,3 +905,26 @@ footer a {
 #detection_display.clap #waiting-emoji {
     opacity: 0;
 }
+
+/* Header de configuration */
+.config-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.config-header h2 {
+    margin: 0;
+}
+
+#saveConfigButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+}
+
+#saveConfigButton span {
+    font-size: 1.1em;
+}

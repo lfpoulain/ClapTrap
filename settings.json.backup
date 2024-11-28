@@ -1,22 +1,15 @@
 {
     "global": {
-        "threshold": "0.1",
+        "threshold": "0.8",
         "delay": "1.0"
     },
     "microphone": {
         "enabled": true,
         "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
-        "audio_source": "Microphone iMac"
+        "audio_source": "Camo Microphone",
+        "device_id": "11"
     },
-    "rtsp_sources": [
-        {
-            "id": "3b89cfcf-dea3-4a88-ab8d-d827de14cc17",
-            "name": "testmanu",
-            "url": "https://rtsp.com/manu",
-            "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
-            "enabled": true
-        }
-    ],
+    "rtsp_sources": [],
     "saved_vban_sources": [],
     "vban": {
         "stream_name": "",

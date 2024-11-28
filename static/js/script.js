@@ -3,7 +3,7 @@ import { initVbanSources, refreshVbanSources } from './modules/vbanSources.js';
 import { initRtspSources } from './modules/rtspSources.js';
 import { initWebhooks } from './modules/webhooks.js';
 import { setupEventListeners } from './modules/events.js';
-import { updateSettings } from './modules/settings.js';
+import { updateSettings, saveSettings } from './modules/settings.js';
 import { initializeSocketIO } from './modules/socketHandlers.js';
 
 window.showClap = function(sourceId) {
@@ -91,6 +91,19 @@ function updateUIState(active) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 DOM fully loaded');
     
+    // Ajouter le gestionnaire d'événements pour le bouton de sauvegarde
+    const saveButton = document.getElementById('saveConfigButton');
+    if (saveButton) {
+        saveButton.addEventListener('click', async () => {
+            saveButton.disabled = true;
+            try {
+                await saveSettings();
+            } finally {
+                saveButton.disabled = false;
+            }
+        });
+    }
+    
     if (window.settings) {
         console.log('📝 Settings loaded:', window.settings);
         updateSettings(window.settings);
@@ -161,4 +174,3 @@ function checkDOMElements() {
     console.log('🔍 DOM Elements Check:', elements);
     return elements;
 }
-

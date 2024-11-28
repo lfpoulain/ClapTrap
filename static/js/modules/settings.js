@@ -14,6 +14,9 @@ export function updateSettings(newSettings) {
 export async function saveSettings() {
     try {
         // Récupérer tous les paramètres actuels de l'interface
+        const audioSourceValue = document.getElementById('micro_source').value;
+        const [deviceId, deviceName] = audioSourceValue.split('|');
+
         const settings = {
             global: {
                 threshold: document.getElementById('threshold').value,
@@ -22,7 +25,8 @@ export async function saveSettings() {
             microphone: {
                 enabled: document.getElementById('webhook-mic-enabled').checked,
                 webhook_url: document.getElementById('webhook-mic-url').value,
-                audio_source: document.getElementById('micro_source').value.split('|')[1]
+                audio_source: deviceName,
+                device_id: deviceId
             }
         };
 
