@@ -370,26 +370,39 @@ def stop_detection_route():
         print(f"Erreur lors de l'arrêt de la détection: {str(e)}")
         return jsonify({'error': str(e)}), 400
 
-@app.route('/test_webhook', methods=['POST'])
+@app.route('/api/webhook/test', methods=['POST'])
 def test_webhook():
     try:
-        data = request.json
+        data = request.get_json()
+        if not data or 'url' not in data:
+            return jsonify({'error': 'URL manquante'}), 400
+
         url = data['url']
-        source = data['source']
-        
-        # Envoyer une requête test au webhook
-        response = requests.post(url, json={
+        source = data.get('source', 'test')
+
+        # Créer les données de test
+        test_data = {
             'event': 'test',
             'source': source,
-            'timestamp': datetime.now().isoformat()
-        })
-        
-        if response.ok:
-            return jsonify({'success': True})
+            'timestamp': datetime.now().isoformat(),
+            'test': True
+        }
+
+        # Utiliser le WebhookManager pour envoyer la requête
+        webhook_manager = WebhookManager()
+        response = webhook_manager.send_webhook(url, test_data)
+
+        if response and response.ok:
+            return jsonify({'success': True, 'message': 'Test réussi'})
         else:
-            return jsonify({'error': f'Le webhook a répondu avec le code {response.status_code}'}), 400
+            status_code = response.status_code if response else 500
+            error_message = response.text if response else 'Échec de la requête webhook'
+            return jsonify({'error': f'Échec du test: {status_code} - {error_message}'}), status_code
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Erreur de connexion: {str(e)}'}), 500
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        return jsonify({'error': f'Erreur: {str(e)}'}), 500
 
 @app.route('/refresh_vban')
 def refresh_vban():

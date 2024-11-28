@@ -1,13 +1,13 @@
 {
     "global": {
-        "threshold": "0.5",
+        "threshold": "0.2",
         "delay": "1.0"
     },
     "microphone": {
-        "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvVx",
-        "enabled": true,
+        "device_index": "9",
         "audio_source": "Microphone iMac",
-        "device_index": "8"
+        "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
+        "enabled": true
     },
     "rtsp_sources": [
         {
@@ -15,7 +15,8 @@
             "name": "dfds",
             "url": "sdfdsf",
             "webhook_url": "sdfsf",
-            "enabled": false
+            "enabled": true,
+            "testButton": "<button class=\"btn btn-sm btn-outline-primary test-webhook\" data-source=\"rtsp-2d644d53-ec43-4fc6-813b-c5ef8dcf67ec\" type=\"button\">Tester</button>"
         }
     ],
     "saved_vban_sources": [

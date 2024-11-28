@@ -49,6 +49,7 @@ function syncWithDOM() {
             const port = parseInt(element.querySelector('.source-port')?.textContent || '6980');
             const webhookUrl = element.querySelector('.webhook-url')?.value || '';
             const enabled = element.querySelector('.source-enabled')?.checked || false;
+            const testButton = `<button class="btn btn-sm btn-outline-primary test-webhook" data-source="vban-${name}" type="button">Tester</button>`;
 
             // Ne pas inclure les sources qui n'ont pas de nom (messages d'erreur ou placeholders)
             if (!name) return null;
@@ -59,7 +60,8 @@ function syncWithDOM() {
                 port,
                 stream_name: name,
                 webhook_url: webhookUrl,
-                enabled
+                enabled,
+                testButton
             };
         }).filter(source => source !== null); // Filtrer les sources nulles
 
@@ -76,13 +78,15 @@ function syncWithDOM() {
             const url = element.querySelector('.rtsp-url')?.value || '';
             const webhookUrl = element.querySelector('.webhook-url')?.value || '';
             const enabled = element.querySelector('.stream-enabled')?.checked || false;
+            const testButton = `<button class="btn btn-sm btn-outline-primary test-webhook" data-source="rtsp-${id}" type="button">Tester</button>`;
 
             return {
                 id,
                 name,
                 url,
                 webhook_url: webhookUrl,
-                enabled
+                enabled,
+                testButton
             };
         });
 

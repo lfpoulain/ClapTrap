@@ -103,7 +103,7 @@ export function refreshSavedVbanSources() {
         })
         .then(sources => {
             console.log('Sources VBAN sauvegardées:', sources);
-            savedSourcesContainer.innerHTML = '';
+            savedVbanSources = sources;
 
             if (!Array.isArray(sources) || sources.length === 0) {
                 savedSourcesContainer.innerHTML = `
@@ -117,26 +117,47 @@ export function refreshSavedVbanSources() {
                 throw new Error('Template vbanSavedSourceTemplate non trouvé');
             }
 
+            savedSourcesContainer.innerHTML = '';
             sources.forEach(source => {
                 const clone = template.content.cloneNode(true);
                 
                 clone.querySelector('.source-name').textContent = source.name;
                 clone.querySelector('.source-ip').textContent = source.ip;
                 clone.querySelector('.source-port').textContent = source.port;
+                clone.querySelector('.source-enabled').checked = source.enabled;
+                clone.querySelector('.webhook-url').value = source.webhook_url || '';
                 
-                const webhookInput = clone.querySelector('.webhook-url');
-                if (webhookInput) {
-                    webhookInput.value = source.webhook_url || '';
+                // Configurer le bouton de test
+                const testButton = clone.querySelector('.test-webhook');
+                if (testButton) {
+                    testButton.setAttribute('data-source', `vban-${source.name}`);
                 }
-                
+
+                // Configurer le bouton de suppression
+                const deleteButton = clone.querySelector('.delete-vban-btn');
+                if (deleteButton) {
+                    deleteButton.addEventListener('click', () => {
+                        if (confirm(`Voulez-vous vraiment supprimer la source VBAN "${source.name}" ?`)) {
+                            removeVBANSource(source);
+                        }
+                    });
+                }
+
+                // Configurer le switch d'activation
                 const enabledSwitch = clone.querySelector('.source-enabled');
                 if (enabledSwitch) {
-                    enabledSwitch.checked = source.enabled !== false;
+                    enabledSwitch.addEventListener('change', (event) => {
+                        source.enabled = event.target.checked;
+                        updateVBANSourceWebhook(source, source.webhook_url);
+                    });
                 }
-                
-                const removeButton = clone.querySelector('.remove-vban-btn');
-                if (removeButton) {
-                    removeButton.addEventListener('click', () => removeVBANSource(source));
+
+                // Configurer l'input webhook
+                const webhookInput = clone.querySelector('.webhook-url');
+                if (webhookInput) {
+                    webhookInput.addEventListener('change', (event) => {
+                        updateVBANSourceWebhook(source, event.target.value);
+                    });
                 }
 
                 savedSourcesContainer.appendChild(clone);

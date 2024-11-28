@@ -2,6 +2,7 @@
 
 :root {
     --primary-color: #007bff;
+    --primary-color-dark: #0056b3;
     --secondary-color: #6c757d;
     --success-color: #28a745;
     --danger-color: #dc3545;
@@ -214,10 +215,27 @@ select {
 .webhook-input-with-test {
     display: flex;
     gap: 10px;
+    width: 100%;
 }
 
-.webhook-input-with-test .webhook-input {
-    flex: 1;
+.webhook-input-with-test input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.webhook-input-with-test input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.webhook-input-with-test .test-webhook {
+    flex-shrink: 0;
+    min-width: 90px;
+    justify-content: center;
 }
 
 .webhook-actions {
@@ -227,45 +245,66 @@ select {
     margin-top: 15px;
 }
 
+/* Boutons de test webhook */
 .test-webhook {
-    padding: 8px 12px;
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
+    padding: 6px 12px;
+    font-size: 14px;
+    line-height: 1.5;
     border-radius: 4px;
+    background-color: var(--primary-color);
+    border: none;
+    color: white;
     cursor: pointer;
-    display: flex;
+    transition: all 0.15s ease-in-out;
+    display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     white-space: nowrap;
+    font-weight: 500;
 }
 
 .test-webhook:hover {
     background-color: var(--primary-color-dark);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.webhook-icon {
-    margin-right: 8px;
-    font-size: 1.2em;
+.test-webhook:active {
+    transform: translateY(1px);
+    box-shadow: none;
 }
 
-/* Styles pour le formulaire d'ajout */
-.webhook-form {
-    background-color: var(--card-bg);
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
+.test-webhook:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    background-color: var(--primary-color);
 }
 
-.form-check {
+.test-webhook .spinner-border {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.15em;
+    border-right-color: transparent;
+}
+
+.webhook-input-with-test {
     display: flex;
-    align-items: center;
     gap: 8px;
-    margin: 10px 0;
+    align-items: center;
+    width: 100%;
 }
 
-.form-check-input {
-    margin: 0;
+.webhook-input-with-test .webhook-input {
+    flex: 1;
+}
+
+.webhook-input-with-test .test-webhook {
+    flex-shrink: 0;
+    min-width: 90px;
+    justify-content: center;
+}
+
+.test-webhook .icon {
+    font-size: 16px;
 }
 
 /* Buttons */
@@ -285,7 +324,7 @@ button:hover {
 }
 
 .test-webhook {
-    background: var(--secondary-color);
+    background: var(--primary-color);
     white-space: nowrap;
 }
 
@@ -646,8 +685,34 @@ footer a {
 
 .card-header {
     display: flex;
-    align-items: center;
     justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.card-header h4 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.list-group-item {
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.list-group-item .d-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.list-group-item .webhook-input-group {
+    margin-top: 1rem;
 }
 
 #vbanSourcesList {
@@ -939,4 +1004,37 @@ footer a {
 
 #saveConfigButton span {
     font-size: 1.1em;
+}
+
+.source-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.delete-vban-btn {
+    padding: 6px 10px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.delete-vban-btn:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.delete-vban-btn:active {
+    transform: translateY(1px);
+    box-shadow: none;
+}
+
+.delete-vban-btn .icon {
+    font-size: 16px;
 }

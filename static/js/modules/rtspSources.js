@@ -42,10 +42,15 @@ function createStreamElement(stream) {
                 <span class="webhook-icon">📹</span>
                 ${stream.name || 'Flux RTSP'}
             </h4>
-            <label class="switch" title="Activer/Désactiver le flux">
-                <input type="checkbox" class="stream-enabled" data-id="${stream.id}" ${stream.enabled ? 'checked' : ''}>
-                <span class="slider round"></span>
-            </label>
+            <div class="source-controls">
+                <label class="switch" title="Activer/Désactiver le flux">
+                    <input type="checkbox" class="stream-enabled" data-id="${stream.id}" ${stream.enabled ? 'checked' : ''}>
+                    <span class="slider round"></span>
+                </label>
+                <button type="button" class="btn btn-light btn-sm delete-vban-btn" data-id="${stream.id}">
+                    <span class="icon" style="color: #dc3545;">❌</span>
+                </button>
+            </div>
         </div>
         <div class="webhook-content">
             <div class="webhook-input-group mb-3">
@@ -67,11 +72,6 @@ function createStreamElement(stream) {
                         Tester
                     </button>
                 </div>
-            </div>
-            <div class="webhook-actions mt-3">
-                <button class="btn btn-sm btn-danger delete-stream" data-id="${stream.id}">
-                    <span>🗑️</span> Supprimer
-                </button>
             </div>
         </div>
     `;
@@ -113,7 +113,7 @@ function setupStreamEventListeners(element, stream) {
     });
 
     // Delete button
-    const deleteButton = element.querySelector('.delete-stream');
+    const deleteButton = element.querySelector('.delete-vban-btn');
     deleteButton.addEventListener('click', () => {
         if (confirm('Voulez-vous vraiment supprimer ce flux RTSP ?')) {
             deleteStream(stream.id);

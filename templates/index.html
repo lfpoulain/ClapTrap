@@ -82,15 +82,18 @@
                         </div>
                         <div class="webhook-content" {% if not settings.microphone.webhook_url %}style="display: none;"{% endif %}>
                             <div class="webhook-input-group mb-3">
-                                <input type="url" id="webhook-mic-url" 
-                                       class="webhook-input" 
-                                       value="{{ settings.microphone.webhook_url }}"
-                                       placeholder="https://votre-serveur.com/webhook"
-                                       aria-label="URL du webhook pour le microphone">
-                                <button type="button" class="test-webhook" data-source="microphone">
-                                    <span class="icon">🔔</span>
-                                    Tester
-                                </button>
+                                <label class="form-label">URL du webhook</label>
+                                <div class="webhook-input-with-test">
+                                    <input type="url" id="webhook-mic-url" 
+                                           class="webhook-input" 
+                                           value="{{ settings.microphone.webhook_url }}"
+                                           placeholder="https://votre-serveur.com/webhook"
+                                           aria-label="URL du webhook pour le microphone">
+                                    <button type="button" class="test-webhook" data-source="mic">
+                                        <span class="icon">🔔</span>
+                                        Tester
+                                    </button>
+                                </div>
                             </div>
                             <div class="source-selector">
                                 <label for="micro_source">Source Audio :</label>
@@ -195,18 +198,24 @@
                     <strong class="source-name"></strong>
                     <small class="text-muted d-block">IP: <span class="source-ip"></span> - Port: <span class="source-port"></span></small>
                 </div>
-                <label class="switch" title="Activer/Désactiver la source">
-                    <input type="checkbox" class="source-enabled">
-                    <span class="slider round"></span>
-                </label>
-            </div>
-            <div class="webhook-section mt-2">
-                <div class="webhook-input-group">
-                    <input type="url" class="webhook-url form-control" placeholder="URL du webhook">
+                <div class="source-controls">
+                    <label class="switch" title="Activer/Désactiver la source">
+                        <input type="checkbox" class="source-enabled">
+                        <span class="slider round"></span>
+                    </label>
+                    <button type="button" class="btn btn-light btn-sm delete-vban-btn">
+                        <span class="icon" style="color: #dc3545;">❌</span>
+                    </button>
                 </div>
-                <div class="webhook-actions mt-3 text-end">
-                    <button class="btn btn-sm btn-danger remove-vban-btn">
-                        <span>🗑️</span> Supprimer
+            </div>
+            <div class="webhook-input-group mt-2">
+                <label class="form-label">URL du webhook</label>
+                <div class="webhook-input-with-test">
+                    <input type="url" class="webhook-input webhook-url" 
+                           placeholder="https://votre-serveur.com/webhook">
+                    <button type="button" class="test-webhook">
+                        <span class="icon">🔔</span>
+                        Tester
                     </button>
                 </div>
             </div>
