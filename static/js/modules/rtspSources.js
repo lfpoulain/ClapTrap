@@ -1,6 +1,5 @@
 import { callApi } from './api.js';
 import { showError, showSuccess } from './utils.js';
-import { saveSettings } from './settings.js';
 
 let rtspStreams = [];
 
@@ -90,7 +89,8 @@ function setupStreamEventListeners(element, stream) {
     urlInput.addEventListener('input', (e) => {
         clearTimeout(urlTimeout);
         urlTimeout = setTimeout(() => {
-            updateStream(stream.id, { url: e.target.value.trim() });
+            const updatedStream = { ...stream, url: e.target.value.trim() };
+            updateStream(stream.id, updatedStream);
         }, 500);
     });
 
@@ -100,14 +100,16 @@ function setupStreamEventListeners(element, stream) {
     webhookInput.addEventListener('input', (e) => {
         clearTimeout(webhookTimeout);
         webhookTimeout = setTimeout(() => {
-            updateStream(stream.id, { webhook_url: e.target.value.trim() });
+            const updatedStream = { ...stream, webhook_url: e.target.value.trim() };
+            updateStream(stream.id, updatedStream);
         }, 500);
     });
 
     // Enabled switch
     const enabledSwitch = element.querySelector('.stream-enabled');
     enabledSwitch.addEventListener('change', (e) => {
-        updateStream(stream.id, { enabled: e.target.checked });
+        const updatedStream = { ...stream, enabled: e.target.checked };
+        updateStream(stream.id, updatedStream);
     });
 
     // Delete button
@@ -227,4 +229,4 @@ async function deleteStream(streamId) {
     } catch (error) {
         showError('Erreur lors de la suppression du flux RTSP');
     }
-} 
+}

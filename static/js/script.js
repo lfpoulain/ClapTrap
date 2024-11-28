@@ -3,8 +3,9 @@ import { initVbanSources, refreshVbanSources } from './modules/vbanSources.js';
 import { initRtspSources } from './modules/rtspSources.js';
 import { initWebhooks } from './modules/webhooks.js';
 import { setupEventListeners } from './modules/events.js';
-import { updateSettings, saveSettings } from './modules/settings.js';
+import { updateSettings, saveSettings, initSettings } from './modules/settings.js';
 import { initializeSocketIO } from './modules/socketHandlers.js';
+import { showError } from './modules/utils.js';
 
 window.showClap = function(sourceId) {
     console.log('📢 showClap called for sourceId:', sourceId);
@@ -91,6 +92,28 @@ function updateUIState(active) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 DOM fully loaded');
     
+    // Initialiser les paramètres
+    if (window.settings) {
+        console.log('📝 Paramètres chargés depuis le serveur:', window.settings);
+        if (initSettings(window.settings)) {
+            // Initialiser les modules seulement si les paramètres sont valides
+            initAudioSources();
+            initVbanSources();
+            initRtspSources();
+            initWebhooks();
+            setupEventListeners();
+            
+            const socket = initializeSocketIO();
+            console.log('✅ Socket.IO initialized');
+        } else {
+            console.error('❌ Échec de l\'initialisation des paramètres');
+            showError('Erreur lors de l\'initialisation des paramètres');
+        }
+    } else {
+        console.error('⚠️ Aucun paramètre trouvé');
+        showError('Erreur: Paramètres non disponibles');
+    }
+    
     // Ajouter le gestionnaire d'événements pour le bouton de sauvegarde
     const saveButton = document.getElementById('saveConfigButton');
     if (saveButton) {
@@ -104,33 +127,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    if (window.settings) {
-        console.log('📝 Settings loaded:', window.settings);
-        updateSettings(window.settings);
-    } else {
-        console.warn('⚠️ No settings found in window object');
-    }
-    
-    // Log l'état initial des éléments importants
-    console.log('Initial DOM state:', {
-        detectedLabels: document.getElementById('detected_labels'),
-        clapEmojis: document.querySelectorAll('.clap-emoji'),
-        sourceLabels: document.querySelectorAll('.source-label')
-    });
-    
-    initAudioSources();
-    initVbanSources();
-    initRtspSources();
-    initWebhooks();
-    setupEventListeners();
-    
-    const socket = initializeSocketIO();
-    console.log('✅ Socket.IO initialized');
-    
     // Vérifier les éléments DOM
     setTimeout(checkDOMElements, 1000);
-    
-    // Vérifier à nouveau après 5 secondes pour voir si quelque chose a changé
     setTimeout(checkDOMElements, 5000);
 });
 

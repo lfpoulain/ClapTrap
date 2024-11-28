@@ -1,6 +1,6 @@
 import { callApi } from './api.js';
 import { showError, showSuccess } from './utils.js';
-import { saveSettings } from './settings.js';
+import { saveSettings, updateSettings } from './settings.js';
 
 let audioSources = [];
 
@@ -19,21 +19,29 @@ function setupMicrophoneWebhook() {
     const enabledSwitch = document.getElementById('webhook-mic-enabled');
     
     if (webhookInput) {
-        // Ajouter un délai de 500ms après la dernière frappe avant de sauvegarder
+        // Stocker les changements en mémoire sans sauvegarder
         let timeout;
         webhookInput.addEventListener('input', (e) => {
             clearTimeout(timeout);
-            timeout = setTimeout(async () => {
+            timeout = setTimeout(() => {
                 const newWebhookUrl = e.target.value.trim();
-                await updateMicrophoneWebhook(newWebhookUrl);
+                updateSettings({
+                    microphone: {
+                        webhook_url: newWebhookUrl
+                    }
+                });
             }, 500);
         });
     }
 
     if (enabledSwitch) {
-        enabledSwitch.addEventListener('change', async (e) => {
+        enabledSwitch.addEventListener('change', (e) => {
             const enabled = e.target.checked;
-            await updateMicrophoneEnabled(enabled);
+            updateSettings({
+                microphone: {
+                    enabled: enabled
+                }
+            });
         });
     }
 }
@@ -44,8 +52,6 @@ async function updateMicrophoneWebhook(webhookUrl) {
             webhook_url: webhookUrl
         });
         if (response.success) {
-            // Sauvegarder les paramètres après la mise à jour réussie
-            await saveSettings();
             showSuccess('Webhook du microphone mis à jour');
         } else {
             throw new Error(response.error || 'Erreur lors de la mise à jour');
@@ -61,8 +67,6 @@ async function updateMicrophoneEnabled(enabled) {
             enabled: enabled
         });
         if (response.success) {
-            // Sauvegarder les paramètres après la mise à jour réussie
-            await saveSettings();
             showSuccess(enabled ? 'Microphone activé' : 'Microphone désactivé');
         } else {
             throw new Error(response.error || 'Erreur lors de la mise à jour');

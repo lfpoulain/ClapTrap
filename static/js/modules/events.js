@@ -14,11 +14,8 @@ function setupDetectionButtons() {
     const stopButton = document.getElementById('stopButton');
 
     if (startButton) {
-        startButton.addEventListener('click', async () => {
-            // Sauvegarder les paramètres avant de démarrer la détection
-            if (await saveSettings()) {
-                startDetection();
-            }
+        startButton.addEventListener('click', () => {
+            startDetection();
         });
     }
     
