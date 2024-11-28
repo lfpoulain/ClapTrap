@@ -174,6 +174,10 @@ def save_settings(new_settings):
             with open(SETTINGS_FILE, 'r') as f:
                 current_settings.update(json.load(f))
 
+        # Préserver les sources RTSP existantes si elles ne sont pas dans les nouveaux paramètres
+        if 'rtsp_sources' not in new_settings:
+            new_settings['rtsp_sources'] = current_settings.get('rtsp_sources', [])
+
         # Mettre à jour avec les nouveaux paramètres
         current_settings.update(new_settings)
 

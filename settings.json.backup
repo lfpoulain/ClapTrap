@@ -9,7 +9,15 @@
         "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
         "enabled": true
     },
-    "rtsp_sources": [],
+    "rtsp_sources": [
+        {
+            "id": "e9d4d25b-0c3e-4d0f-985f-7fe8ab21e05d",
+            "name": "qsdqsdqsd",
+            "url": "qsdqsdsqd",
+            "webhook_url": "qsdqsdqsd",
+            "enabled": true
+        }
+    ],
     "saved_vban_sources": [
         {
             "name": "Talkie",

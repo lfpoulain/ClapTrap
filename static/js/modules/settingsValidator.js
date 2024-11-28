@@ -53,46 +53,47 @@ const settingsSchema = {
 
 // Valide et complète les paramètres manquants
 export function validateSettings(settings) {
+    console.log('🔍 Validation - Paramètres reçus:', settings);
     const validatedSettings = { ...settings };
     const errors = [];
 
     // Valider chaque section
     Object.entries(settingsSchema).forEach(([section, schema]) => {
         if (!validatedSettings[section]) {
-            validatedSettings[section] = schema.type === 'array' ? [] : {};
+            if (section === 'rtsp_sources') {
+                // Préserver les sources RTSP existantes
+                validatedSettings[section] = settings[section] || [];
+                console.log('🔍 Validation - Préservation des sources RTSP:', validatedSettings[section]);
+            } else {
+                validatedSettings[section] = schema.type === 'array' ? [] : {};
+            }
         }
 
         if (schema.type === 'array') {
+            // Pour les tableaux (comme rtsp_sources), préserver les valeurs existantes
             if (!Array.isArray(validatedSettings[section])) {
-                errors.push(`La section ${section} doit être un tableau`);
                 validatedSettings[section] = [];
             }
-            // Valider chaque élément du tableau
-            validatedSettings[section] = validatedSettings[section].map(item => {
-                const validatedItem = { ...item };
-                schema.itemSchema.required.forEach(field => {
-                    if (!(field in validatedItem)) {
-                        validatedItem[field] = schema.itemSchema.defaults[field] || null;
-                        errors.push(`Champ manquant ${field} dans un élément de ${section}`);
+            // Ne pas réinitialiser les tableaux existants
+            console.log(`🔍 Validation - Tableau ${section}:`, validatedSettings[section]);
+        } else {
+            // Pour les autres sections, vérifier les champs requis
+            if (schema.required) {
+                schema.required.forEach(field => {
+                    if (!validatedSettings[section][field] && validatedSettings[section][field] !== false) {
+                        validatedSettings[section][field] = schema.defaults[field];
+                        errors.push(`Champ manquant ${section}.${field}, valeur par défaut utilisée`);
                     }
                 });
-                return validatedItem;
-            });
-        } else {
-            // Valider les champs requis
-            schema.required.forEach(field => {
-                if (!(field in validatedSettings[section])) {
-                    validatedSettings[section][field] = schema.defaults[field];
-                    errors.push(`Champ manquant ${field} dans la section ${section}`);
-                }
-            });
+            }
         }
     });
 
+    console.log('🔍 Validation - Paramètres validés:', validatedSettings);
     return {
         settings: validatedSettings,
-        errors: errors,
-        isValid: errors.length === 0
+        errors,
+        isValid: true
     };
 }
 

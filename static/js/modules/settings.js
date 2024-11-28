@@ -24,8 +24,10 @@ function syncWithDOM() {
     const [deviceId, deviceName] = micSource ? micSource.value.split('|') : ['0', 'default'];
 
     // Synchroniser les paramètres globaux et du microphone
+    console.log('🔍 Sources RTSP actuelles avant mise à jour:', currentSettings.rtsp_sources);
+    
     const updatedSettings = {
-        ...currentSettings,
+        ...currentSettings,  // Inclure tous les paramètres actuels d'abord
         global: {
             ...currentSettings.global,
             threshold: threshold ? threshold.value : currentSettings.global.threshold,
@@ -39,6 +41,58 @@ function syncWithDOM() {
             device_index: deviceId || '0'
         }
     };
+
+    console.log('🔍 Sources RTSP après création updatedSettings:', updatedSettings.rtsp_sources);
+
+    // Synchroniser les sources RTSP
+    const rtspContainer = document.getElementById('rtspStreamsContainer');
+    console.log('🔍 Container RTSP trouvé:', rtspContainer ? 'oui' : 'non');
+    
+    // Récupérer les sources RTSP existantes du settings.json
+    const existingRtspSources = currentSettings.rtsp_sources || [];
+    console.log('🔍 Sources RTSP existantes:', existingRtspSources);
+
+    // Si le container existe, essayer de récupérer les nouvelles sources
+    if (rtspContainer) {
+        const rtspElements = rtspContainer.querySelectorAll('.list-group-item');
+        console.log('🔍 Nombre d\'éléments RTSP trouvés:', rtspElements.length);
+        
+        if (rtspElements.length > 0) {
+            const rtspSources = Array.from(rtspElements).map(element => {
+                const id = element.querySelector('.stream-enabled')?.dataset.id;
+                const name = element.querySelector('strong')?.textContent.trim();
+                const url = element.querySelector('.rtsp-url')?.value || '';
+                const webhookUrl = element.querySelector('.webhook-url')?.value || '';
+                const enabled = element.querySelector('.stream-enabled')?.checked || false;
+
+                const source = {
+                    id,
+                    name,
+                    url,
+                    webhook_url: webhookUrl,
+                    enabled
+                };
+                console.log('🔍 Source RTSP trouvée:', source);
+                return source;
+            }).filter(source => source.id && source.name); // Ne garder que les sources valides
+
+            if (rtspSources.length > 0) {
+                updatedSettings.rtsp_sources = rtspSources;
+                console.log('🔍 Nouvelles sources RTSP utilisées:', rtspSources);
+            } else {
+                updatedSettings.rtsp_sources = existingRtspSources;
+                console.log('🔍 Aucune nouvelle source RTSP valide trouvée, conservation des existantes');
+            }
+        } else {
+            updatedSettings.rtsp_sources = existingRtspSources;
+            console.log('🔍 Aucun élément RTSP trouvé, conservation des sources existantes');
+        }
+    } else {
+        updatedSettings.rtsp_sources = existingRtspSources;
+        console.log('🔍 Pas de container RTSP, conservation des sources existantes');
+    }
+
+    console.log('🔍 Sources RTSP finales:', updatedSettings.rtsp_sources);
 
     // Synchroniser les sources VBAN
     const savedVbanContainer = document.getElementById('savedVBANSources');
@@ -67,30 +121,6 @@ function syncWithDOM() {
 
         console.log('📝 Sources VBAN synchronisées:', savedVbanSources);
         updatedSettings.saved_vban_sources = savedVbanSources;
-    }
-
-    // Synchroniser les sources RTSP
-    const rtspContainer = document.getElementById('rtspStreamsContainer');
-    if (rtspContainer) {
-        const rtspSources = Array.from(rtspContainer.querySelectorAll('.webhook-card')).map(element => {
-            const id = element.querySelector('.stream-enabled')?.dataset.id;
-            const name = element.querySelector('h4')?.textContent.trim().replace('📹', '').trim();
-            const url = element.querySelector('.rtsp-url')?.value || '';
-            const webhookUrl = element.querySelector('.webhook-url')?.value || '';
-            const enabled = element.querySelector('.stream-enabled')?.checked || false;
-            const testButton = `<button class="btn btn-sm btn-outline-primary test-webhook" data-source="rtsp-${id}" type="button">Tester</button>`;
-
-            return {
-                id,
-                name,
-                url,
-                webhook_url: webhookUrl,
-                enabled,
-                testButton
-            };
-        });
-
-        updatedSettings.rtsp_sources = rtspSources;
     }
 
     // Mettre à jour currentSettings
