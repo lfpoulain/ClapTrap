@@ -135,7 +135,11 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
        + Vérifier les notifications (websocket et webhook) [OK]
        + Tests de performance et stabilité [OK]
 
-   - Implémenter la réception et le décodage du flux audio VBAN en temps réel [TODO]
+   - Implémenter la réception et le décodage du flux audio VBAN en temps réel [OK]
+     * Décodage des données brutes VBAN en tableau NumPy [OK]
+     * Normalisation des valeurs audio [OK]
+     * Gestion des erreurs de décodage [OK]
+     * Traitement des données en temps réel [OK]
    - Mettre en place un buffer circulaire pour stocker les échantillons audio [TODO]
 
 2. Implémentation de la détection [TODO]

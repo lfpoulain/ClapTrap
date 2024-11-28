@@ -6,10 +6,10 @@
         "buffer_duration": "1.0"
     },
     "microphone": {
-        "device_index": "8",
-        "audio_source": "Microphone iMac",
+        "enabled": false,
         "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
-        "enabled": true
+        "audio_source": "Microphone iMac",
+        "device_index": "9"
     },
     "rtsp_sources": [
         {

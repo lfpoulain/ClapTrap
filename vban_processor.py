@@ -220,49 +220,74 @@ class VBANAudioProcessor:
             
     def notify_clap(self, score, timestamp):
         """
-        Envoie les notifications de détection de clap (websocket et webhook).
+        Notifie la détection d'un clap via webhook et websocket.
         
         Args:
-            score (float): Score de détection
+            score (float): Score de confiance de la détection
             timestamp (float): Timestamp de la détection
         """
         try:
             # Notification websocket
             if self._socketio:
-                self._socketio.emit('clap', {
-                    'source_id': f'vban-{self.stream_name}',
-                    'timestamp': timestamp,
-                    'score': float(score)
+                self._socketio.emit('clap_detected', {
+                    'source': 'vban',
+                    'stream_name': self.stream_name,
+                    'score': score,
+                    'timestamp': timestamp
                 })
-                logging.info(f"Clap détecté sur {self.stream_name} avec score {score}")
-            
+                
             # Notification webhook
             if self.webhook_url:
                 try:
-                    response = requests.post(self.webhook_url)
-                    logging.info(f"Webhook appelé: {response.status_code}")
-                except Exception as e:
+                    response = requests.post(self.webhook_url, json={
+                        'event': 'clap_detected',
+                        'source': 'vban',
+                        'stream_name': self.stream_name,
+                        'score': score,
+                        'timestamp': timestamp
+                    }, timeout=1.0)
+                    response.raise_for_status()
+                except requests.exceptions.RequestException as e:
                     logging.error(f"Erreur lors de l'appel webhook: {str(e)}")
                     
         except Exception as e:
-            logging.error(f"Erreur lors de la notification du clap: {str(e)}")
+            logging.error(f"Erreur lors de la notification: {str(e)}")
             
-    def audio_callback(self, audio_data, timestamp):
+    def _process_vban_stream(self, stream_data):
         """
-        Callback appelé pour chaque chunk audio reçu du flux VBAN.
+        Traite les données brutes du flux VBAN.
         
         Args:
-            audio_data (numpy.ndarray): Données audio brutes
+            stream_data (bytes): Données brutes du flux VBAN
+            
+        Returns:
+            numpy.ndarray: Données audio décodées
+        """
+        try:
+            # Décodage des données VBAN
+            # Le format attendu est PCM 16 bits, mono ou stéréo
+            audio_data = np.frombuffer(stream_data, dtype=np.int16)
+            
+            # Normalisation des données audio
+            audio_data = audio_data.astype(np.float32) / 32768.0
+            
+            return audio_data
+            
+        except Exception as e:
+            logging.error(f"Erreur lors du traitement du flux VBAN: {str(e)}")
+            raise
+            
+    def audio_callback(self, data, timestamp):
+        """
+        Callback appelé lorsque des données audio sont reçues du flux VBAN.
+        
+        Args:
+            data (numpy.ndarray): Données audio brutes du flux VBAN
             timestamp (float): Timestamp des données
         """
         try:
-            # Vérifier que les données viennent de la bonne source
-            active_sources = self.detector.get_active_sources()
-            if self.ip not in active_sources:
-                return  # Ignorer les données si elles ne viennent pas de la source configurée
-            
             # Prétraitement des données audio
-            processed_data = self.preprocess_audio(audio_data)
+            processed_data = self.preprocess_audio(data)
             
             # Détection des claps
             self.detect_claps(processed_data, timestamp)
