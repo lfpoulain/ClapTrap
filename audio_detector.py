@@ -108,12 +108,16 @@ class AudioDetector:
             if not isinstance(audio_data, np.ndarray):
                 audio_data = np.array(audio_data)
                 
+            # Log des informations sur les données audio
+            logging.debug(f"Audio data - Shape: {audio_data.shape}, dtype: {audio_data.dtype}, min: {audio_data.min()}, max: {audio_data.max()}")
+                
             # S'assurer que les données sont en float32 et normalisées entre -1 et 1
             if audio_data.dtype != np.float32:
                 audio_data = audio_data.astype(np.float32)
                 if audio_data.max() > 1.0 or audio_data.min() < -1.0:
                     audio_data = audio_data / 32768.0  # Normalisation pour int16
-                
+                    logging.debug(f"After normalization - min: {audio_data.min()}, max: {audio_data.max()}")
+            
             # Ajouter les données au buffer
             self.buffer.extend(audio_data.flatten())
             

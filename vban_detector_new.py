@@ -7,6 +7,7 @@ import sounddevice as sd
 import scipy.signal
 import collections
 import threading
+import logging
 
 class VBANDetector:
     def __init__(self, port=6980):
@@ -37,7 +38,7 @@ class VBANDetector:
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._socket.settimeout(0.5)
-        print(f"Démarrage de l'écoute VBAN sur le port {self.port}")
+        logging.info(f"Démarrage de l'écoute VBAN sur le port {self.port}")
         self._socket.bind(('0.0.0.0', self.port))
         
         # Démarrer l'écoute dans un thread séparé
@@ -47,17 +48,16 @@ class VBANDetector:
 
     def _listen_loop(self):
         """Boucle d'écoute des flux VBAN"""
-        print("Thread d'écoute VBAN démarré")
+        logging.info("Thread d'écoute VBAN démarré")
         logged_sources = set()
         
         while self.running:
             try:
                 data, addr = self._socket.recvfrom(2048)
-                print(f"Reçu {len(data)} octets de {addr[0]}:{addr[1]}")
                 
                 # Vérifier que le paquet est assez grand pour contenir l'en-tête VBAN (28 bytes)
                 if len(data) < 28:
-                    print(f"Paquet trop petit ({len(data)} bytes), ignoré")
+                    logging.warning(f"Paquet trop petit ({len(data)} bytes), ignoré")
                     continue
                     
                 source = self._parse_vban_packet(data, addr, logged_sources)
@@ -68,7 +68,7 @@ class VBANDetector:
                         num_samples = len(audio_bytes) // 2  # 2 bytes par échantillon int16
                         
                         if num_samples == 0:
-                            print("Pas de données audio dans le paquet")
+                            logging.warning("Pas de données audio dans le paquet")
                             continue
                             
                         # N'utiliser que les bytes correspondant à des échantillons complets
@@ -93,7 +93,8 @@ class VBANDetector:
                                 audio_data = scipy.signal.resample(audio_data, target_length)
                         
                         # Log pour debug
-                        print(f"Traité {len(audio_data)} échantillons audio de {addr[0]}, min={audio_data.min():.3f}, max={audio_data.max():.3f}")
+                        if audio_data.max() > 0.3 or audio_data.min() < -0.3:  # Augmenté le seuil à 0.3
+                            logging.info(f"Son fort détecté sur {addr[0]}, amplitude: min={audio_data.min():.3f}, max={audio_data.max():.3f}")
                         
                         # Ajouter au buffer de manière thread-safe
                         with self._lock:
@@ -119,7 +120,7 @@ class VBANDetector:
                             self.source_callback(self.get_active_sources())
                             
                     except Exception as e:
-                        print(f"Erreur lors du traitement des données audio: {str(e)}")
+                        logging.error(f"Erreur lors du traitement des données audio: {str(e)}")
                         continue
             except socket.timeout:
                 # Nettoyer les sources inactives (plus de 5 secondes)
@@ -163,13 +164,13 @@ class VBANDetector:
                 
                 # Log si demandé
                 if logged_sources is not None and ip not in logged_sources:
-                    print(f"Paquet VBAN parsé: {name}, {channels} canaux @ {sample_rate}Hz")
+                    logging.info(f"Paquet VBAN parsé: {name}, {channels} canaux @ {sample_rate}Hz")
                     logged_sources.add(ip)
                 
                 return source
                 
         except Exception as e:
-            print(f"Erreur lors du parsing du paquet VBAN: {e}")
+            logging.error(f"Erreur lors du parsing du paquet VBAN: {e}")
             return None
 
     def stop_listening(self):

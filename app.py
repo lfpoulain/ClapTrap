@@ -18,6 +18,17 @@ from urllib3.util.retry import Retry
 import logging
 import psutil
 
+# Configuration du logging
+logging.basicConfig(
+    level=logging.INFO,  # Changé de DEBUG à INFO
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+# Réduire le niveau de log des modules trop verbeux
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
+logging.getLogger('engineio').setLevel(logging.WARNING)
+logging.getLogger('socketio').setLevel(logging.WARNING)
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'votre_clé_secrète_ici'
 socketio = SocketIO(app, 

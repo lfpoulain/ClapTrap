@@ -15,14 +15,23 @@ import os
 import pyaudio
 import collections
 import cv2
+import sys
 from events import send_clap_event, send_labels
 import threading
 from vban_manager import get_vban_detector  # Import the get_vban_detector function
 import warnings
 from audio_detector import AudioDetector
 
+# Configuration du logging en DEBUG
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+
 warnings.filterwarnings("ignore", category=UserWarning, module="google.protobuf.symbol_database")
-logging.basicConfig(level=logging.INFO)
 
 # Variables globales
 detection_running = False
