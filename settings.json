@@ -23,7 +23,7 @@
     "saved_vban_sources": [
         {
             "name": "Talkie",
-            "ip": "192.168.68.60",
+            "ip": "192.168.68.70",
             "port": 6980,
             "stream_name": "Talkie",
             "webhook_url": "",

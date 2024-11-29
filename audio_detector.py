@@ -13,7 +13,8 @@ class AudioDetector:
         self.sample_rate = sample_rate
         self.buffer_size = int(buffer_duration * sample_rate)
         self.buffer = collections.deque(maxlen=self.buffer_size)
-        self.classifier = None
+        self.stream_classifier = None  # Pour le microphone
+        self.clip_classifier = None    # Pour le VBAN
         self.running = False
         self.lock = threading.Lock()
         self.last_detection_time = 0
@@ -21,17 +22,31 @@ class AudioDetector:
         self.labels_callback = None
         
     def initialize(self, max_results=5, score_threshold=0.5):
-        """Initialise le classificateur audio"""
+        """Initialise les classificateurs audio"""
         try:
             base_options = python.BaseOptions(model_asset_path=self.model_path)
-            options = audio.AudioClassifierOptions(
+            
+            # Créer le classificateur en mode stream pour le microphone
+            stream_options = audio.AudioClassifierOptions(
                 base_options=base_options,
                 running_mode=audio.RunningMode.AUDIO_STREAM,
                 max_results=max_results,
                 score_threshold=score_threshold,
                 result_callback=self._handle_result
             )
-            self.classifier = audio.AudioClassifier.create_from_options(options)
+            self.stream_classifier = audio.AudioClassifier.create_from_options(stream_options)
+            
+            # Créer le classificateur en mode stream pour le VBAN aussi
+            vban_options = audio.AudioClassifierOptions(
+                base_options=base_options,
+                running_mode=audio.RunningMode.AUDIO_STREAM,
+                max_results=max_results,
+                score_threshold=score_threshold,
+                result_callback=self._handle_result
+            )
+            self.clip_classifier = audio.AudioClassifier.create_from_options(vban_options)
+            
+            self.running = True
             logging.info(f"Classificateur audio initialisé avec succès (sample_rate: {self.sample_rate}Hz)")
         except Exception as e:
             logging.error(f"Erreur lors de l'initialisation du classificateur: {str(e)}")
@@ -66,15 +81,17 @@ class AudioDetector:
                 reverse=True
             )[:3]
             labels_data = [
-                {"label": label.category_name, "score": float(label.score)}  # Convertir en float pour la sérialisation JSON
+                {"label": label.category_name, "score": float(label.score)}
                 for label in top3_labels
+                if label.score > 0.5  # Ne garder que les labels avec un score > 0.5
             ]
             
             # Log pour debug
-            logging.debug(f"Labels détectés: {labels_data}")
+            if labels_data:  # Ne logger que si on a des labels pertinents
+                logging.debug(f"Labels détectés: {labels_data}")
             
             # Envoyer les labels si un callback est défini
-            if self.labels_callback:
+            if self.labels_callback and labels_data:
                 try:
                     self.labels_callback(labels_data)
                 except Exception as e:
@@ -87,7 +104,7 @@ class AudioDetector:
                     try:
                         self.detection_callback({
                             'timestamp': current_time,
-                            'score': float(score_sum)  # Convertir en float pour la sérialisation JSON
+                            'score': float(score_sum)
                         })
                     except Exception as e:
                         logging.error(f"Erreur dans le callback de détection: {str(e)}")
@@ -110,26 +127,44 @@ class AudioDetector:
             # Log pour debug
             logging.debug(f"Audio data - Shape: {audio_data.shape}, dtype: {audio_data.dtype}, min: {np.min(audio_data)}, max: {np.max(audio_data)}")
             
-            # Traiter avec le classificateur
-            if self.classifier:
+            # Traiter avec le classificateur approprié
+            if self.running:
                 # S'assurer que les données sont en float32
                 if audio_data.dtype != np.float32:
                     audio_data = audio_data.astype(np.float32)
                 
-                # Créer le conteneur audio
-                audio_data_container = containers.AudioData.create_from_array(
-                    audio_data,
-                    self.sample_rate
-                )
-                # Utiliser classify_async pour le mode stream
-                timestamp_ms = int(time.time() * 1000)
-                self.classifier.classify_async(audio_data_container, timestamp_ms)
+                # Pour le VBAN (données plus grandes que 1600 échantillons)
+                if len(audio_data) > 1600:
+                    # Utiliser des blocs de 4000 échantillons pour VBAN
+                    block_size = 4000
+                    num_blocks = len(audio_data) // block_size
+                    for i in range(num_blocks):
+                        block = audio_data[i*block_size:(i+1)*block_size]
+                        # Créer le conteneur audio
+                        audio_data_container = containers.AudioData.create_from_array(
+                            block,
+                            self.sample_rate
+                        )
+                        # Classifier le bloc avec le classificateur VBAN
+                        if self.clip_classifier:
+                            timestamp_ms = int(time.time() * 1000)
+                            self.clip_classifier.classify_async(audio_data_container, timestamp_ms)
+                else:
+                    # Créer le conteneur audio pour le micro
+                    audio_data_container = containers.AudioData.create_from_array(
+                        audio_data,
+                        self.sample_rate
+                    )
+                    # Classifier les données en mode async pour le micro
+                    if self.stream_classifier:
+                        timestamp_ms = int(time.time() * 1000)
+                        self.stream_classifier.classify_async(audio_data_container, timestamp_ms)
                 
         except Exception as e:
             logging.error(f"Erreur dans le traitement audio: {str(e)}")
             import traceback
             logging.error(traceback.format_exc())
-        
+            
     def set_detection_callback(self, callback):
         """Définit le callback pour la détection de claps"""
         self.detection_callback = callback
@@ -140,15 +175,22 @@ class AudioDetector:
         
     def start(self):
         """Démarre la détection"""
-        if not self.classifier:
+        if not self.stream_classifier or not self.clip_classifier:
             self.initialize()
         self.running = True
         
     def stop(self):
-        """Arrête la détection"""
-        self.running = False
-        if self.classifier:
-            self.classifier.close()
-            self.classifier = None
-        with self.lock:
-            self.buffer.clear()
+        """Arrête le classificateur"""
+        if self.running:
+            try:
+                if self.stream_classifier:
+                    self.stream_classifier.close()
+                if self.clip_classifier:
+                    self.clip_classifier.close()
+                self.running = False
+            except Exception as e:
+                logging.error(f"Erreur lors de l'arrêt du classificateur: {str(e)}")
+
+    def __del__(self):
+        """Destructeur pour s'assurer que les classificateurs sont bien arrêtés"""
+        self.stop()
