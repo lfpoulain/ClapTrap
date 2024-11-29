@@ -143,16 +143,16 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
    - Mettre en place un buffer circulaire pour stocker les échantillons audio [OK]
 
 2. Implémentation de la détection [TODO]
-   - Adapter l'algorithme de détection des claps existant (celui utilisé pour le micro)
+   - Adapter l'algorithme de détection des claps existant (celui utilisé pour le micro) [OK]
    - Implémenter le traitement du signal audio :
-     * Filtrage du signal
-     * Détection des pics d'amplitude
-     * Analyse des caractéristiques temporelles et fréquentielles
-   - Ajouter des seuils de détection configurables
+     * Filtrage du signal [OK]
+     * Détection des pics d'amplitude [OK]
+     * Analyse des caractéristiques temporelles et fréquentielles [OK]
+   - Ajouter des seuils de détection configurables [OK]
 
 3. Intégration dans l'architecture existante [TODO]
-   - Créer un gestionnaire de détection pour chaque source VBAN active
-   - Intégrer la détection dans la boucle principale de traitement
+   - Créer un gestionnaire de détection pour chaque source VBAN active [OK]
+   - Intégrer la détection dans la boucle principale de traitement [OK]
    - Implémenter la gestion des événements de détection
 
 4. Interface utilisateur [TODO]

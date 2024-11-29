@@ -16,11 +16,14 @@ class VBANDetector:
         self._socket = None
         self.audio_callback = None
         self.source_callback = None
-        self.buffer = collections.deque(maxlen=48000)  # Buffer 1 seconde à 48kHz
-        self.last_timestamp = 0
         self.target_sample_rate = 16000  # Taux d'échantillonnage cible
+        
+        # Buffer circulaire avec une capacité de 1 seconde au taux d'échantillonnage cible
+        self.buffer = collections.deque(maxlen=self.target_sample_rate)
+        
+        self.last_timestamp = 0
         self.stream = None
-        self._lock = threading.Lock()  # Ajouter un verrou pour la thread-safety
+        self._lock = threading.Lock()  # Verrou pour la thread-safety
         
     def start_listening(self):
         """Démarre l'écoute des flux VBAN"""
@@ -46,55 +49,78 @@ class VBANDetector:
         """Boucle d'écoute des flux VBAN"""
         print("Thread d'écoute VBAN démarré")
         logged_sources = set()
+        
         while self.running:
             try:
                 data, addr = self._socket.recvfrom(2048)
                 print(f"Reçu {len(data)} octets de {addr[0]}:{addr[1]}")
+                
+                # Vérifier que le paquet est assez grand pour contenir l'en-tête VBAN (28 bytes)
+                if len(data) < 28:
+                    print(f"Paquet trop petit ({len(data)} bytes), ignoré")
+                    continue
+                    
                 source = self._parse_vban_packet(data, addr, logged_sources)
                 if source:
-                    # Extraire les données audio
-                    audio_data = np.frombuffer(data[28:], dtype=np.int16)
-                    # Convertir en float32 et normaliser entre -1 et 1
-                    audio_data = audio_data.astype(np.float32) / 32768.0
-                    
-                    # Log pour debug
-                    print(f"Reçu {len(audio_data)} échantillons audio de {addr[0]}, min={audio_data.min():.3f}, max={audio_data.max():.3f}")
-                    
-                    # Rééchantillonner si nécessaire
-                    if source.sample_rate != self.target_sample_rate:
-                        audio_data = scipy.signal.resample(audio_data, 
-                            int(len(audio_data) * self.target_sample_rate / source.sample_rate))
-                    
-                    # Convertir en mono si nécessaire
-                    if source.channels > 1:
-                        # S'assurer que la taille des données est divisible par le nombre de canaux
-                        samples_per_channel = len(audio_data) // source.channels
-                        audio_data = audio_data[:samples_per_channel * source.channels]
-                        audio_data = audio_data.reshape(-1, source.channels)
-                        audio_data = np.mean(audio_data, axis=1)
-                    
-                    # Ajouter au buffer
-                    self.buffer.extend(audio_data)
-                    
-                    # Appeler le callback audio si défini
-                    if self.audio_callback and len(self.buffer) >= self.target_sample_rate:
-                        audio_chunk = np.array(list(self.buffer)[:self.target_sample_rate])
-                        self.buffer.clear()
-                        current_time = time.time()
-                        self.audio_callback(audio_chunk, current_time)
-                    
-                    # Mettre à jour les informations de la source
-                    self.sources[addr[0]].update({
-                        'last_seen': time.time(),
-                        'name': source.name,
-                        'sample_rate': source.sample_rate,
-                        'channels': source.channels
-                    })
-                    
-                    # Appeler le callback source si défini
-                    if self.source_callback:
-                        self.source_callback(self.get_active_sources())
-                    
+                    try:
+                        # Calculer le nombre d'échantillons complets disponibles
+                        audio_bytes = data[28:]
+                        num_samples = len(audio_bytes) // 2  # 2 bytes par échantillon int16
+                        
+                        if num_samples == 0:
+                            print("Pas de données audio dans le paquet")
+                            continue
+                            
+                        # N'utiliser que les bytes correspondant à des échantillons complets
+                        audio_data = np.frombuffer(audio_bytes[:num_samples*2], dtype=np.int16)
+                        
+                        # Convertir en float32 et normaliser entre -1 et 1
+                        audio_data = audio_data.astype(np.float32) / 32768.0
+                        
+                        # Convertir en mono si nécessaire
+                        if source.channels > 1:
+                            # S'assurer que la taille des données est divisible par le nombre de canaux
+                            samples_per_channel = len(audio_data) // source.channels
+                            audio_data = audio_data[:samples_per_channel * source.channels]
+                            audio_data = audio_data.reshape(-1, source.channels)
+                            audio_data = np.mean(audio_data, axis=1)
+                        
+                        # Rééchantillonner si nécessaire
+                        if source.sample_rate != self.target_sample_rate:
+                            # Calculer le nombre d'échantillons après rééchantillonnage
+                            target_length = int(len(audio_data) * self.target_sample_rate / source.sample_rate)
+                            if target_length > 0:
+                                audio_data = scipy.signal.resample(audio_data, target_length)
+                        
+                        # Log pour debug
+                        print(f"Traité {len(audio_data)} échantillons audio de {addr[0]}, min={audio_data.min():.3f}, max={audio_data.max():.3f}")
+                        
+                        # Ajouter au buffer de manière thread-safe
+                        with self._lock:
+                            self.buffer.extend(audio_data)
+                            
+                            # Appeler le callback audio si nous avons assez d'échantillons
+                            if self.audio_callback and len(self.buffer) >= self.target_sample_rate:
+                                audio_chunk = np.array(list(self.buffer)[:self.target_sample_rate])
+                                self.buffer.clear()
+                                current_time = time.time()
+                                self.audio_callback(audio_chunk, current_time)
+                        
+                        # Mettre à jour les informations de la source
+                        self.sources[addr[0]].update({
+                            'last_seen': time.time(),
+                            'name': source.name,
+                            'sample_rate': source.sample_rate,
+                            'channels': source.channels
+                        })
+                        
+                        # Appeler le callback source si défini
+                        if self.source_callback:
+                            self.source_callback(self.get_active_sources())
+                            
+                    except Exception as e:
+                        print(f"Erreur lors du traitement des données audio: {str(e)}")
+                        continue
             except socket.timeout:
                 # Nettoyer les sources inactives (plus de 5 secondes)
                 current_time = time.time()

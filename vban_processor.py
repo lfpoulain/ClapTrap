@@ -7,6 +7,7 @@ from mediapipe.tasks.python.components import containers
 from vban_manager import get_vban_detector
 import requests
 from circular_buffer import CircularAudioBuffer
+from vban_signal_processor import VBANSignalProcessor
 
 class VBANAudioProcessor:
     """
@@ -36,11 +37,30 @@ class VBANAudioProcessor:
         # Configuration de la détection
         self.score_threshold = score_threshold
         self.delay = delay
+        self.peak_threshold = 0.5  # Seuil pour la détection des pics
+        self.peak_prominence = 0.3  # Proéminence minimale des pics
+        
+        # Paramètres pour la détection basée sur les caractéristiques
+        self.feature_weights = {
+            'temporal': {
+                'rms': 0.2,
+                'zcr': 0.15,
+                'crest_factor': 0.2
+            },
+            'spectral': {
+                'spectral_centroid': 0.15,
+                'spectral_contrast': 0.15,
+                'spectral_flatness': 0.15
+            }
+        }
         
         # Configuration audio
         self.sample_rate = 16000  # Taux d'échantillonnage standard pour YAMNet
         self.buffer_size = int(0.975 * self.sample_rate)  # ~975ms buffer
         self.audio_format = containers.AudioDataFormat(1, self.sample_rate)  # Mono, 16kHz
+        
+        # Processeur de signal
+        self.signal_processor = VBANSignalProcessor(sample_rate=self.sample_rate)
         
         # Buffer circulaire pour stocker les échantillons audio
         self.circular_buffer = CircularAudioBuffer(self.buffer_size, channels=1)
@@ -72,34 +92,87 @@ class VBANAudioProcessor:
             logging.error(f"Erreur lors de l'initialisation du classificateur: {str(e)}")
             raise
             
+    def evaluate_clap_features(self, features):
+        """
+        Évalue les caractéristiques du signal pour déterminer s'il s'agit d'un clap.
+        
+        Args:
+            features (dict): Caractéristiques du signal
+            
+        Returns:
+            float: Score entre 0 et 1 indiquant la probabilité d'un clap
+        """
+        score = 0.0
+        
+        # Évaluation des caractéristiques temporelles
+        temporal = features['temporal']
+        if len(temporal['rms']) > 0:
+            # Forte amplitude soudaine
+            rms_score = np.max(temporal['rms']) * self.feature_weights['temporal']['rms']
+            
+            # Taux de passage par zéro élevé
+            zcr_score = np.mean(temporal['zcr']) * self.feature_weights['temporal']['zcr']
+            
+            # Facteur de crête élevé (caractéristique des sons impulsifs)
+            crest_score = np.max(temporal['crest_factor']) * self.feature_weights['temporal']['crest_factor']
+            
+            score += rms_score + zcr_score + crest_score
+        
+        # Évaluation des caractéristiques spectrales
+        spectral = features['spectral']
+        if len(spectral['spectral_centroid']) > 0:
+            # Centre de gravité spectral élevé
+            centroid_score = (np.mean(spectral['spectral_centroid']) / (self.sample_rate/4)) * \
+                           self.feature_weights['spectral']['spectral_centroid']
+            
+            # Contraste spectral élevé
+            contrast_score = np.max(spectral['spectral_contrast']) * \
+                          self.feature_weights['spectral']['spectral_contrast']
+            
+            # Faible platitude spectrale (son non tonal)
+            flatness_score = (1 - np.mean(spectral['spectral_flatness'])) * \
+                          self.feature_weights['spectral']['spectral_flatness']
+            
+            score += centroid_score + contrast_score + flatness_score
+        
+        return min(score, 1.0)  # Normaliser le score entre 0 et 1
+
     def _classification_callback(self, result: audio.AudioClassifierResult, timestamp_ms: int):
         """
         Callback appelé par le classificateur pour chaque résultat.
-        
-        Args:
-            result: Résultat de la classification audio
-            timestamp_ms: Timestamp en millisecondes
         """
         try:
-            # Calcul du score pour les sons de claps
-            score_sum = sum(
+            # Récupérer les données audio actuelles du buffer
+            current_audio = self.circular_buffer.get_buffer()
+            
+            # Analyser le signal
+            signal_features = self.signal_processor.analyze_signal(current_audio)
+            
+            # Évaluer les caractéristiques pour la détection de claps
+            feature_score = self.evaluate_clap_features(signal_features)
+            
+            # Calcul du score pour les sons de claps (YAMNet)
+            yamnet_score = sum(
                 category.score
                 for category in result.classifications[0].categories
                 if category.category_name in ["Hands", "Clapping", "Cap gun"]
             )
             
             # Soustraction du score des faux positifs
-            score_sum -= sum(
+            yamnet_score -= sum(
                 category.score
                 for category in result.classifications[0].categories
                 if category.category_name == "Finger snapping"
             )
             
+            # Combiner les scores (moyenne pondérée)
+            combined_score = (yamnet_score * 0.4 + feature_score * 0.6)
+            
             # Détection et notification des claps
-            if score_sum > self.score_threshold:
+            if combined_score > self.score_threshold:
                 current_time = time.time()
                 if current_time - self.last_clap_time > self.delay:
-                    self.notify_clap(score_sum, current_time)
+                    self.notify_clap(combined_score, current_time)
                     self.last_clap_time = current_time
                     
         except Exception as e:
@@ -165,27 +238,25 @@ class VBANAudioProcessor:
         Returns:
             containers.AudioData: Données audio formatées pour le classificateur
         """
-        try:
-            # Aplatir si nécessaire (conversion stéréo -> mono)
-            if len(audio_data.shape) > 1:
-                audio_data = audio_data.flatten()
-            
-            # Ajuster la taille du buffer
-            if len(audio_data) > self.buffer_size:
-                audio_data = audio_data[:self.buffer_size]
-            elif len(audio_data) < self.buffer_size:
-                padding = np.zeros(self.buffer_size - len(audio_data))
-                audio_data = np.concatenate([audio_data, padding])
-            
-            # Formater pour le classificateur
-            return containers.AudioData.create_from_array(
-                audio_data.reshape(-1, 1),
-                self.audio_format
-            )
-            
-        except Exception as e:
-            logging.error(f"Erreur lors du prétraitement audio: {str(e)}")
-            raise
+        # Appliquer le filtrage du signal
+        filtered_data = self.signal_processor.apply_bandpass_filter(
+            audio_data,
+            low_cutoff_freq=100,  # Filtrer les basses fréquences < 100 Hz
+            high_cutoff_freq=4000  # Filtrer les hautes fréquences > 4000 Hz
+        )
+        
+        # Supprimer le bruit électrique 50/60 Hz
+        filtered_data = self.signal_processor.apply_notch_filter(filtered_data, center_freq=50)
+        filtered_data = self.signal_processor.apply_notch_filter(filtered_data, center_freq=60)
+        
+        # Normaliser le signal
+        filtered_data = self.signal_processor.normalize_signal(filtered_data)
+        
+        # Convertir en format audio pour le classificateur
+        return containers.AudioData.create_from_array(
+            filtered_data,
+            self.audio_format
+        )
             
     def detect_claps(self, audio_data, timestamp):
         """

@@ -6,10 +6,10 @@
         "buffer_duration": "1.0"
     },
     "microphone": {
-        "enabled": false,
+        "device_index": "1",
+        "audio_source": "USB Audio",
         "webhook_url": "None",
-        "audio_source": "Microphone iMac",
-        "device_index": "9"
+        "enabled": false
     },
     "rtsp_sources": [
         {

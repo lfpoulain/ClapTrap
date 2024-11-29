@@ -4,4 +4,5 @@ numpy==1.26.3
 sounddevice==0.4.6
 mediapipe==0.10.8
 requests==2.31.0
-python-vban==0.0.7
+pyvban
+scipy==1.11.4
