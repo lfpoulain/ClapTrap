@@ -3,6 +3,14 @@ import pyaudio
 import numpy as np
 import struct
 from scipy import signal
+from audio_detector import AudioDetector
+import logging
+
+# Configuration du logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 # Configuration VBAN
 VBAN_PORT = 6980  # Port standard VBAN
@@ -43,6 +51,11 @@ def main():
     stream = None
     header = None
 
+    # Initialisation du détecteur audio
+    detector = AudioDetector("yamnet.tflite")
+    detector.initialize()
+    detector.start()
+
     try:
         print("En attente d'une source VBAN...")
         while True:
@@ -75,6 +88,10 @@ def main():
                     new_samples = int(samples * 16000 / header.sample_rate)
                     audio_array = signal.resample(audio_array, new_samples)
                 
+                # Envoyer les données au détecteur
+                detector.process_audio(audio_array)
+                
+                # Jouer l'audio
                 stream.write(audio_array.tobytes())
 
             except Exception as e:
@@ -89,6 +106,7 @@ def main():
             stream.close()
         audio.terminate()
         sock.close()
+        detector.stop()  # Arrêter proprement le détecteur
 
 if __name__ == "__main__":
     main()

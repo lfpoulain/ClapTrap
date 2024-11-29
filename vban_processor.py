@@ -373,9 +373,15 @@ class VBANAudioProcessor:
             # Lecture du buffer pour le traitement
             processed_data = self.circular_buffer.read(self.buffer_size)
             
-            # Prétraitement et détection
+            # Prétraitement et classification
             processed_audio = self.preprocess_audio(processed_data)
-            self.detect_claps(processed_audio, timestamp)
+            if self.classifier:
+                timestamp_ms = int(timestamp * 1000)
+                self.classifier.classify_async(processed_audio, timestamp_ms)
+            
+            # Détection de claps si nécessaire
+            if self.detector:
+                self.detect_claps(processed_audio, timestamp)
             
         except Exception as e:
             logging.error(f"Erreur dans le callback audio: {str(e)}")
