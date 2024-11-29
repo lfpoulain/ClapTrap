@@ -19,6 +19,7 @@ from events import send_clap_event, send_labels
 import threading
 from vban_manager import get_vban_detector  # Import the get_vban_detector function
 import warnings
+from audio_detector import AudioDetector
 
 warnings.filterwarnings("ignore", category=UserWarning, module="google.protobuf.symbol_database")
 logging.basicConfig(level=logging.INFO)
@@ -195,248 +196,74 @@ def start_detection(
 def run_detection(model, max_results, score_threshold, overlapping_factor, socketio, webhook_url, delay, audio_source, rtsp_url):
     """Fonction qui exécute la détection dans un thread séparé"""
     try:
-        classification_result_list = []
-
-        def save_result(result: audio.AudioClassifierResult, timestamp_ms: int):
-            result.timestamp_ms = timestamp_ms
-            classification_result_list.append(result)
-
-        # Initialize the audio classification model.
-        base_options = python.BaseOptions(model_asset_path=model)
-        options = audio.AudioClassifierOptions(
-            base_options=base_options,
-            running_mode=audio.RunningMode.AUDIO_STREAM,
-            max_results=max_results,
-            score_threshold=score_threshold,
-            result_callback=save_result,
-        )
-        classifier = audio.AudioClassifier.create_from_options(options)
-
-        # Initialize the audio recorder and a tensor to store the audio input.
-        duration = 0.1  # Réduire de 1.0 à 0.1 seconde
-        sample_rate = 16000
-        num_channels = 1
-        buffer_size = int(duration * sample_rate * num_channels)
-        audio_format = containers.AudioDataFormat(num_channels, sample_rate)
-        audio_data = containers.AudioData(buffer_size, audio_format)
-
-        input_length_in_second = (
-            float(len(audio_data.buffer)) / audio_data.audio_format.sample_rate
-        )
-        interval_between_inference = input_length_in_second * (1 - overlapping_factor)
-        pause_time = interval_between_inference * 0.05
-        last_inference_time = time.time()
-        last_clap_time = 0  # Initialiser le temps de la dernière détection
-
-        # Initialiser la source audio en fonction du paramètre audio_source
-        logging.info("Audio source : %s", audio_source)
+        # Initialiser le détecteur audio
+        detector = AudioDetector(model, sample_rate=16000, buffer_duration=1.0)
         
-        if not audio_source:
-            logging.error("Aucune source audio spécifiée")
-            return False
-            
+        def handle_detection(detection_data):
+            try:
+                if socketio:
+                    socketio.emit('clap', {
+                        'source_id': 'microphone' if not audio_source.startswith('vban://') else f'vban-{audio_source.replace("vban://", "")}',
+                        'timestamp': detection_data['timestamp'],
+                        'score': detection_data['score']
+                    })
+                
+                if webhook_url:
+                    requests.post(webhook_url)
+            except Exception as e:
+                logging.error(f"Erreur lors de l'envoi de l'événement clap: {str(e)}")
+        
+        def handle_labels(labels):
+            if socketio:
+                socketio.emit("labels", {"detected": labels})
+        
+        # Configurer les callbacks
+        detector.set_detection_callback(handle_detection)
+        detector.set_labels_callback(handle_labels)
+        
+        # Démarrer la détection
+        detector.start()
+        
+        # Initialiser la source audio en fonction du paramètre audio_source
         if audio_source.startswith("rtsp"):
             if not rtsp_url:
                 raise ValueError("RTSP URL must be provided for RTSP audio source.")
-            logging.info("RTSP")
-            # Utiliser PyAudio pour lire le flux RTSP
-            rtsp_reader = read_audio_from_rtsp(rtsp_url, buffer_size)
+            rtsp_reader = read_audio_from_rtsp(rtsp_url, int(16000 * 0.1))  # Buffer de 100ms
+            while detection_running:
+                audio_data = next(rtsp_reader)
+                detector.process_audio(audio_data)
+                
         elif audio_source.startswith("vban://"):
-            # Extraire l'IP du format vban://IP
             vban_ip = audio_source.replace("vban://", "")
-            logging.info(f"Démarrage de l'écoute VBAN sur l'IP {vban_ip}")
-            detector = get_vban_detector()  # Get the global VBAN detector instance
+            vban_detector = get_vban_detector()
             
             def audio_callback(audio_data, timestamp):
-                try:
-                    # Vérifier que les données viennent de la bonne source
-                    active_sources = detector.get_active_sources()
-                    if vban_ip not in active_sources:
-                        return  # Ignorer les données si elles ne viennent pas de la source configurée
-                        
-                    # Convertir en format attendu par le classificateur
-                    # Ensure audio_data is the right shape (samples,)
-                    if len(audio_data.shape) > 1:
-                        audio_data = audio_data.flatten()
+                if not detection_running:
+                    return
                     
-                    # Ensure we have the right number of samples
-                    target_samples = int(0.975 * 16000)  # ~975ms at 16kHz
-                    if len(audio_data) > target_samples:
-                        audio_data = audio_data[:target_samples]
-                    elif len(audio_data) < target_samples:
-                        # Pad with zeros if we have too few samples
-                        padding = np.zeros(target_samples - len(audio_data))
-                        audio_data = np.concatenate([audio_data, padding])
+                active_sources = vban_detector.get_active_sources()
+                if vban_ip not in active_sources:
+                    return
                     
-                    # Reshape for the classifier (samples, 1)
-                    audio_data = audio_data.reshape(-1, 1)
-                    
-                    # Convert to AudioData format
-                    audio_data = containers.AudioData.create_from_array(
-                        audio_data,
-                        containers.AudioDataFormat(1, 16000)
-                    )
-                    
-                    # Process with classifier
-                    classifier.classify_async(audio_data, round(timestamp * 1000))
-                    
-                    # Traiter les résultats de classification
-                    if classification_result_list:
-                        classification = classification_result_list[0].classifications[0]
-                        score_sum = sum(
-                            category.score
-                            for category in classification.categories
-                            if category.category_name in ["Hands", "Clapping", "Cap gun"]
-                        )
-                        score_sum -= sum(
-                            category.score
-                            for category in classification.categories
-                            if category.category_name == "Finger snapping"
-                        )
-                        
-                        # Envoi de tous les labels et scores détectés
-                        top3_labels = sorted(classification.categories, key=lambda x: x.score, reverse=True)[:3]
-                        top3_labels_json = [{"label": label.category_name, "score": label.score} for label in top3_labels]
-                        
-                        # Log pour debug
-                        logging.info(f"Labels détectés: {top3_labels_json}")
-                        
-                        # Émettre les labels via socketio
-                        if _socketio:
-                            _socketio.emit("labels", {"detected": top3_labels_json})
-
-                        if score_sum > score_threshold:
-                            current_time = time.time()
-                            if current_time - last_clap_time > delay:
-                                logging.info(f"CLAP détecté sur la source VBAN {vban_ip} avec score {score_sum}")
-                                try:
-                                    # Émettre l'événement avec plus d'informations
-                                    if _socketio:
-                                        _socketio.emit('clap', {
-                                            'source_id': f'vban-{vban_ip}',
-                                            'timestamp': current_time,
-                                            'score': float(score_sum)
-                                        })
-                                    
-                                    # Appel webhook si configuré
-                                    if webhook_url:
-                                        response = requests.post(webhook_url)
-                                        logging.info(f"Webhook VBAN appelé: {response.status_code}")
-                                except Exception as e:
-                                    logging.error(f"Erreur lors de l'émission de l'événement clap VBAN: {str(e)}")
-                                    
-                                last_clap_time = current_time
-                                
-                        # Clear results after processing
-                        classification_result_list.clear()
-                        
-                except Exception as e:
-                    logging.error(f"Erreur dans le callback VBAN: {str(e)}")
-                    import traceback
-                    logging.error(traceback.format_exc())
+                detector.process_audio(audio_data)
             
-            def source_callback(sources):
-                logging.info(f"Sources VBAN actives : {list(sources.keys())}")
+            vban_detector.set_audio_callback(audio_callback)
             
-            detector.source_callback = source_callback
-            detector.set_audio_callback(audio_callback)
-            detector.start_listening()
-            return True  # Pour les sources VBAN, on retourne directement car le traitement est asynchrone
-        else:
-            logging.info("Microphone")
-            try:
-                # Recharger les paramètres pour avoir le dernier device_index
-                with open('settings.json', 'r') as f:
-                    settings = json.load(f)
-                microphone_settings = settings.get('microphone', {})
-                device_index = int(microphone_settings.get('device_index', 0))
-                logging.info(f"Utilisation du microphone avec device_index: {device_index}")
-                
-                record = sd.InputStream(
-                    samplerate=sample_rate, 
-                    channels=num_channels, 
-                    device=device_index
-                )
-                record.start()
-            except Exception as e:
-                logging.error(f"Erreur lors de l'initialisation du microphone: {str(e)}")
-                return False
-
-        while detection_running:
-            now = time.time()
-            diff = now - last_inference_time
-            if diff < interval_between_inference:
-                time.sleep(pause_time)
-                continue
-            last_inference_time = now
-
-            try:
-                if audio_source.startswith("rtsp"):
-                    audio_data_array = next(rtsp_reader)
-                    if audio_data_array is None:
-                        break
-                    audio_data.load_from_array(audio_data_array)
-                else:  # Microphone
-                    data, _ = record.read(buffer_size)
-                    data = data.reshape(-1, 1)
-                    audio_data.load_from_array(data)
-
-                classifier.classify_async(audio_data, round(time.time() * 1000))
-
-                if classification_result_list:
-                    classification = classification_result_list[0].classifications[0]
-                    score_sum = sum(
-                        category.score
-                        for category in classification.categories
-                        if category.category_name in ["Hands", "Clapping", "Cap gun"]
-                    )
-                    score_sum -= sum(
-                        category.score
-                        for category in classification.categories
-                        if category.category_name == "Finger snapping"
-                    )
-
-                    # Envoi de tous les labels et scores détectés
-                    top3_labels = sorted(classification.categories, key=lambda x: x.score, reverse=True)[:3]
-                    top3_labels_json = [{"label": label.category_name, "score": label.score} for label in top3_labels]
-                    if _socketio:
-                        _socketio.emit("labels", {"detected": top3_labels_json})
-
-                    if score_sum > score_threshold:
-                        current_time = time.time()
-                        if current_time - last_clap_time > delay:
-                            source_id = 'microphone'
-                            if audio_source.startswith("rtsp"):
-                                source_id = f'rtsp-{rtsp_url}'
-
-                            logging.info(f"CLAP détecté sur la source {source_id}")
-                            try:
-                                if _socketio:
-                                    _socketio.emit('clap', {
-                                        'source_id': source_id,
-                                        'timestamp': current_time,
-                                        'score': float(score_sum)
-                                    })
-                                
-                                if webhook_url:
-                                    response = requests.post(webhook_url)
-                                    logging.info(f"Webhook appelé: {response.status_code}")
-                            except Exception as e:
-                                logging.error(f"Erreur lors de l'émission de l'événement clap: {str(e)}")
-                                
-                            last_clap_time = current_time
-                    classification_result_list.clear()
-
-            except Exception as e:
-                logging.error(f"Erreur pendant la détection: {str(e)}")
-                continue
-
-        stop_detection()
+        else:  # Microphone
+            with sd.InputStream(
+                channels=1,
+                samplerate=16000,
+                blocksize=int(16000 * 0.1),  # Buffer de 100ms
+                callback=lambda indata, frames, time, status: detector.process_audio(indata[:, 0])
+            ):
+                while detection_running:
+                    time.sleep(0.1)
+                    
+        detector.stop()
         return True
-
+        
     except Exception as e:
-        logging.error(f"Erreur dans le thread de détection: {e}")
-        stop_detection()
+        logging.error(f"Erreur dans run_detection: {str(e)}")
         return False
 
 def stop_detection():
