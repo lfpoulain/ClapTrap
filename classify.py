@@ -273,11 +273,6 @@ def stop_detection():
     try:
         detection_running = False
         
-        # Cleanup VBAN detector if it exists
-        detector = get_vban_detector()
-        if detector:
-            detector.cleanup()
-            
         # Notify clients that detection has stopped
         if _socketio:
             _socketio.emit("detection_status", {"status": "stopped"})
