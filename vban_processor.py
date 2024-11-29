@@ -6,6 +6,7 @@ from mediapipe.tasks.python import audio
 from mediapipe.tasks.python.components import containers
 from vban_manager import get_vban_detector
 import requests
+from circular_buffer import CircularAudioBuffer
 
 class VBANAudioProcessor:
     """
@@ -40,6 +41,9 @@ class VBANAudioProcessor:
         self.sample_rate = 16000  # Taux d'échantillonnage standard pour YAMNet
         self.buffer_size = int(0.975 * self.sample_rate)  # ~975ms buffer
         self.audio_format = containers.AudioDataFormat(1, self.sample_rate)  # Mono, 16kHz
+        
+        # Buffer circulaire pour stocker les échantillons audio
+        self.circular_buffer = CircularAudioBuffer(self.buffer_size, channels=1)
         
         # État interne
         self.is_running = False
@@ -143,6 +147,7 @@ class VBANAudioProcessor:
             if self.detector:
                 self.detector.remove_callback(self.audio_callback)
             self.is_running = False
+            self.circular_buffer.clear()  # Vide le buffer à l'arrêt
             logging.info(f"Arrêt du traitement audio VBAN pour {self.stream_name}")
             return True
             
@@ -286,11 +291,20 @@ class VBANAudioProcessor:
             timestamp (float): Timestamp des données
         """
         try:
-            # Prétraitement des données audio
-            processed_data = self.preprocess_audio(data)
+            # Traitement des données VBAN
+            audio_data = self._process_vban_stream(data)
             
-            # Détection des claps
-            self.detect_claps(processed_data, timestamp)
+            # Écriture dans le buffer circulaire
+            if not self.circular_buffer.write(audio_data):
+                logging.warning("Échec de l'écriture dans le buffer circulaire")
+                return
+                
+            # Lecture du buffer pour le traitement
+            processed_data = self.circular_buffer.read(self.buffer_size)
+            
+            # Prétraitement et détection
+            processed_audio = self.preprocess_audio(processed_data)
+            self.detect_claps(processed_audio, timestamp)
             
         except Exception as e:
             logging.error(f"Erreur dans le callback audio: {str(e)}")
