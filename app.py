@@ -20,7 +20,7 @@ import psutil
 
 # Configuration du logging
 logging.basicConfig(
-    level=logging.INFO,  # Changé de DEBUG à INFO
+    level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
@@ -28,13 +28,17 @@ logging.basicConfig(
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
 logging.getLogger('engineio').setLevel(logging.WARNING)
 logging.getLogger('socketio').setLevel(logging.WARNING)
+logging.getLogger('engineio.server').setLevel(logging.WARNING)
+logging.getLogger('socketio.server').setLevel(logging.WARNING)
 
+# Configurer Flask pour qu'il soit moins verbeux
 app = Flask(__name__)
+app.logger.setLevel(logging.WARNING)
 app.config['SECRET_KEY'] = 'votre_clé_secrète_ici'
 socketio = SocketIO(app, 
     cors_allowed_origins="*",
-    logger=True,
-    engineio_logger=True,
+    logger=False,  
+    engineio_logger=False,  
     ping_timeout=60,
     ping_interval=25,
     async_mode='threading'

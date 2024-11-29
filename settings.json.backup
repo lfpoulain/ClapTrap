@@ -6,7 +6,7 @@
         "buffer_duration": "1.0"
     },
     "microphone": {
-        "enabled": true,
+        "enabled": false,
         "webhook_url": "None",
         "audio_source": "Microphone iMac",
         "device_index": "9"
@@ -27,7 +27,7 @@
             "port": 6980,
             "stream_name": "Talkie",
             "webhook_url": "",
-            "enabled": false,
+            "enabled": true,
             "testButton": "<button class=\"btn btn-sm btn-outline-primary test-webhook\" data-source=\"vban-Talkie\" type=\"button\">Tester</button>"
         }
     ],

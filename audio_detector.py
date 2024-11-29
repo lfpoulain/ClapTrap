@@ -100,53 +100,36 @@ class AudioDetector:
 
     def process_audio(self, audio_data):
         """Traite les données audio"""
-        with self.lock:
-            if not self.running or not self.classifier:
-                return
-                
-            # Convertir en numpy array si ce n'est pas déjà fait
-            if not isinstance(audio_data, np.ndarray):
-                audio_data = np.array(audio_data)
-                
-            # Log des informations sur les données audio
-            logging.debug(f"Audio data - Shape: {audio_data.shape}, dtype: {audio_data.dtype}, min: {audio_data.min()}, max: {audio_data.max()}")
-                
-            # S'assurer que les données sont en float32 et normalisées entre -1 et 1
-            if audio_data.dtype != np.float32:
-                audio_data = audio_data.astype(np.float32)
-                if audio_data.max() > 1.0 or audio_data.min() < -1.0:
-                    audio_data = audio_data / 32768.0  # Normalisation pour int16
-                    logging.debug(f"After normalization - min: {audio_data.min()}, max: {audio_data.max()}")
+        try:
+            # Rééchantillonnage si nécessaire
+            if len(audio_data) > self.buffer_size:
+                # Cas du VBAN à 48000Hz -> 16000Hz
+                resampled_data = audio_data[::3]  # Prend 1 échantillon sur 3 pour passer de 48kHz à 16kHz
+                audio_data = resampled_data
             
-            # Ajouter les données au buffer
-            self.buffer.extend(audio_data.flatten())
+            # Log pour debug
+            logging.debug(f"Audio data - Shape: {audio_data.shape}, dtype: {audio_data.dtype}, min: {np.min(audio_data)}, max: {np.max(audio_data)}")
             
-            # Si on a assez de données, les traiter
-            if len(self.buffer) >= self.sample_rate:
-                try:
-                    # Préparer les données pour la classification
-                    data = np.array(list(self.buffer))
-                    # Assurer que les données sont dans le bon format (samples, 1)
-                    data = data.reshape(-1, 1)
-                    
-                    # Créer le tenseur audio
-                    audio_data = containers.AudioData.create_from_array(
-                        data,
-                        self.sample_rate
-                    )
-                    
-                    # Classifier les données
-                    timestamp = round(time.time() * 1000)
-                    self.classifier.classify_async(audio_data, timestamp)
-                    
-                except Exception as e:
-                    logging.error(f"Erreur lors de la classification: {str(e)}")
-                    import traceback
-                    logging.error(traceback.format_exc())
-                finally:
-                    # Vider le buffer même en cas d'erreur
-                    self.buffer.clear()
-
+            # Traiter avec le classificateur
+            if self.classifier:
+                # S'assurer que les données sont en float32
+                if audio_data.dtype != np.float32:
+                    audio_data = audio_data.astype(np.float32)
+                
+                # Créer le conteneur audio
+                audio_data_container = containers.AudioData.create_from_array(
+                    audio_data,
+                    self.sample_rate
+                )
+                # Utiliser classify_async pour le mode stream
+                timestamp_ms = int(time.time() * 1000)
+                self.classifier.classify_async(audio_data_container, timestamp_ms)
+                
+        except Exception as e:
+            logging.error(f"Erreur dans le traitement audio: {str(e)}")
+            import traceback
+            logging.error(traceback.format_exc())
+        
     def set_detection_callback(self, callback):
         """Définit le callback pour la détection de claps"""
         self.detection_callback = callback
