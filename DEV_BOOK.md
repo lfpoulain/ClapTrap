@@ -140,7 +140,7 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
      * Normalisation des valeurs audio [OK]
      * Gestion des erreurs de décodage [OK]
      * Traitement des données en temps réel [OK]
-   - Mettre en place un buffer circulaire pour stocker les échantillons audio [TODO]
+   - Mettre en place un buffer circulaire pour stocker les échantillons audio [OK]
 
 2. Implémentation de la détection [TODO]
    - Adapter l'algorithme de détection des claps existant (celui utilisé pour le micro)

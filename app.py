@@ -4,7 +4,7 @@ from classify import start_detection, stop_detection, is_running
 import sounddevice as sd
 import json
 import requests
-from vban_manager import init_vban_detector as init_vban, cleanup_vban_detector
+from vban_manager import init_vban_detector as init_vban, cleanup_vban_detector, get_vban_detector
 import threading
 import time
 import os
@@ -903,36 +903,16 @@ def delete_rtsp_stream(stream_id):
 def get_vban_sources():
     try:
         # S'assurer que la découverte VBAN est initialisée
-        if not init_vban():
+        detector = get_vban_detector()
+        if not detector:
             return jsonify({'error': 'Impossible d\'initialiser la découverte VBAN'}), 500
             
-        # Effectuer un scan rapide
-        start_time = time.time()
-        active_sources = []
-        logged_sources = set()  # Pour suivre les sources déjà loggées
+        # Utiliser la nouvelle méthode thread-safe pour obtenir les sources
+        active_sources = detector.get_sources(timeout=1.0)
         
-        try:
-            while time.time() - start_time < 1.0:  # Scan pendant 1 seconde
-                try:
-                    data, addr = init_vban()._sock.recvfrom(2048)
-                    if len(data) >= 4 and data[:4] == b'VBAN':
-                        source = init_vban()._parse_vban_packet(data, addr, logged_sources)
-                        if source:
-                            source_key = f"{source.ip}:{source.port}"
-                            # Éviter les doublons
-                            if not any(s.ip == source.ip and s.port == source.port for s in active_sources):
-                                active_sources.append(source)
-                                logged_sources.add(source_key)
-                except socket.timeout:
-                    continue
-                    
-        except Exception as e:
-            print(f"Erreur pendant le scan VBAN: {e}")
-            
         print(f"Sources VBAN actives trouvées: {len(active_sources)}")
-        formatted_sources = [source.to_dict() for source in active_sources]
-        print(f"Sources formatées: {formatted_sources}")
-        return jsonify(formatted_sources)
+        print(f"Sources formatées: {active_sources}")
+        return jsonify(active_sources)
         
     except Exception as e:
         print(f"Erreur lors de la récupération des sources VBAN: {str(e)}")

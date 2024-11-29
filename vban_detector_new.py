@@ -20,6 +20,7 @@ class VBANDetector:
         self.last_timestamp = 0
         self.target_sample_rate = 16000  # Taux d'échantillonnage cible
         self.stream = None
+        self._lock = threading.Lock()  # Ajouter un verrou pour la thread-safety
         
     def start_listening(self):
         """Démarre l'écoute des flux VBAN"""
@@ -200,3 +201,40 @@ class VBANDetector:
         # Attendre que le thread d'écoute se termine
         if hasattr(self, '_listen_thread') and self._listen_thread.is_alive():
             self._listen_thread.join(timeout=1.0)
+
+    def get_sources(self, timeout=1.0):
+        """Obtient la liste des sources VBAN actives de manière thread-safe
+        
+        Args:
+            timeout (float): Temps maximum d'attente en secondes
+            
+        Returns:
+            list: Liste des sources VBAN actives
+        """
+        if not self.running or not self._socket:
+            return []
+            
+        active_sources = []
+        start_time = time.time()
+        
+        with self._lock:
+            # Nettoyer les sources inactives
+            current_time = time.time()
+            inactive = [ip for ip, info in self.sources.items() 
+                      if current_time - info['last_seen'] > 5]
+            for ip in inactive:
+                del self.sources[ip]
+                
+            # Retourner les sources actives
+            for ip, info in self.sources.items():
+                if current_time - info['last_seen'] <= timeout:
+                    active_sources.append({
+                        'ip': ip,
+                        'name': info['name'],
+                        'sample_rate': info['sample_rate'],
+                        'channels': info['channels'],
+                        'last_seen': info['last_seen'],
+                        'port': self.port  # Add the port number
+                    })
+                    
+        return active_sources
