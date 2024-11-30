@@ -683,10 +683,8 @@ pathDefaults:
 # for example "~^(test1|test2)$" will match both "test1" and "test2",
 # for example "~^prefix" will match all paths that start with "prefix".
 paths:
-  # example:
-  # my_camera:
-  #   source: rtsp://my_camera
   mic:
+    source: publisher
     runOnInit: ffmpeg -f avfoundation -i ":4" -c:a aac -ar 44100 -ac 2 -b:a 192k -bufsize 1920k -profile:a aac_low -f rtsp -rtsp_transport tcp rtsp://localhost:$RTSP_PORT/$MTX_PATH
     runOnInitRestart: yes
   #live:

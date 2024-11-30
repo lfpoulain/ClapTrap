@@ -6,31 +6,21 @@
         "buffer_duration": "1.0"
     },
     "microphone": {
-        "enabled": true,
+        "device_index": "1",
+        "audio_source": "USB Audio",
         "webhook_url": "None",
-        "audio_source": "Microphone iMac",
-        "device_index": "9"
+        "enabled": false
     },
     "rtsp_sources": [
         {
             "id": "e9d4d25b-0c3e-4d0f-985f-7fe8ab21e05d",
             "name": "qsdqsdqsd",
-            "url": "qsdqsdsqd",
+            "url": "rtsp://localhost:8554/mic",
             "webhook_url": "qsdqsdqsd",
             "enabled": true
         }
     ],
-    "saved_vban_sources": [
-        {
-            "name": "Talkie",
-            "ip": "192.168.68.55",
-            "port": 6980,
-            "stream_name": "Talkie",
-            "webhook_url": "",
-            "enabled": false,
-            "testButton": "<button class=\"btn btn-sm btn-outline-primary test-webhook\" data-source=\"vban-Talkie\" type=\"button\">Tester</button>"
-        }
-    ],
+    "saved_vban_sources": [],
     "vban": {
         "stream_name": "",
         "ip": "0.0.0.0",

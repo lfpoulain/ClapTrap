@@ -343,30 +343,31 @@ def start_detection_route():
                 'rtsp_url': None
             }
 
-            # Check for VBAN sources if microphone is disabled
-            if not microphone_enabled:
+            # Check for RTSP sources first
+            rtsp_sources = settings.get('rtsp_sources', [])
+            for source in rtsp_sources:
+                if source.get('enabled', False):
+                    detection_params['audio_source'] = f"rtsp://{source['url']}"
+                    detection_params['rtsp_url'] = source['url']
+                    logging.info(f"Utilisation de la source RTSP: {source.get('name', 'Unknown')} ({source['url']})")
+                    break
+
+            # If no RTSP source is enabled, check for VBAN sources
+            if not detection_params['audio_source'] and not microphone_enabled:
                 # Vérifier d'abord saved_vban_sources
                 saved_vban_sources = settings.get('saved_vban_sources', [])
                 if saved_vban_sources:
                     # Utiliser la première source VBAN active
                     for source in saved_vban_sources:
-                        if source.get('enabled', True):  # Si enabled n'est pas spécifié, on considère la source comme active
+                        if source.get('enabled', True):
                             detection_params['audio_source'] = f"vban://{source['ip']}"
                             logging.info(f"Utilisation de la source VBAN: {source['name']} ({source['ip']})")
                             break
                     else:
-                        logging.error("Aucune source VBAN active trouvée")
-                        return jsonify({'error': 'Aucune source VBAN active trouvée'}), 400
+                        if not any(source.get('enabled', True) for source in saved_vban_sources):
+                            logging.info("Aucune source VBAN active n'est activée")
                 else:
-                    # Vérifier ensuite vban_sources pour la rétrocompatibilité
-                    vban_sources = settings.get('vban_sources', [])
-                    if vban_sources:
-                        detection_params['audio_source'] = f"vban://{vban_sources[0]['ip']}"
-                        logging.info(f"Utilisation de la source VBAN: {vban_sources[0].get('name', 'Unknown')} ({vban_sources[0]['ip']})")
-                    else:
-                        logging.error("Aucune source audio VBAN spécifiée")
-                        return jsonify({'error': 'Aucune source audio VBAN spécifiée'}), 400
-
+                    logging.info("Aucune source VBAN configurée")
         except (ValueError, TypeError) as e:
             return jsonify({'error': f'Erreur dans les paramètres : {str(e)}'}), 400
         

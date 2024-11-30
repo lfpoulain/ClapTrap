@@ -6,16 +6,16 @@
         "buffer_duration": "1.0"
     },
     "microphone": {
-        "enabled": true,
-        "webhook_url": "None",
-        "audio_source": "Microphone iMac",
-        "device_index": "9"
+        "enabled": false,
+        "webhook_url": null,
+        "audio_source": null,
+        "device_index": "0"
     },
     "rtsp_sources": [
         {
             "id": "e9d4d25b-0c3e-4d0f-985f-7fe8ab21e05d",
             "name": "qsdqsdqsd",
-            "url": "qsdqsdsqd",
+            "url": "rtsp://localhost:8554/mic",
             "webhook_url": "qsdqsdqsd",
             "enabled": true
         }
