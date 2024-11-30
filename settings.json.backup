@@ -6,10 +6,10 @@
         "buffer_duration": "1.0"
     },
     "microphone": {
-        "device_index": "9",
-        "audio_source": "Microphone iMac",
-        "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvVNone",
-        "enabled": false
+        "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
+        "enabled": true,
+        "audio_source": "Scarlett Solo USB",
+        "device_index": "3"
     },
     "rtsp_sources": [
         {
@@ -17,7 +17,7 @@
             "name": "qsdqsdqsd",
             "url": "rtsp://localhost:8554/mic",
             "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
-            "enabled": true
+            "enabled": false
         }
     ],
     "saved_vban_sources": [
@@ -27,7 +27,7 @@
             "port": 6980,
             "stream_name": "Talkie",
             "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
-            "enabled": true,
+            "enabled": false,
             "testButton": "<button class=\"btn btn-sm btn-outline-primary test-webhook\" data-source=\"vban-Talkie\" type=\"button\">Tester</button>"
         }
     ],

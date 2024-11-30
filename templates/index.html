@@ -76,11 +76,11 @@
                             </h4>
                             <label class="switch" title="Activer/Désactiver le webhook">
                                 <input type="checkbox" id="webhook-mic-enabled" 
-                                       {% if settings.microphone.webhook_url %}checked{% endif %}>
+                                       {% if settings.microphone.enabled %}checked{% endif %}>
                                 <span class="slider round"></span>
                             </label>
                         </div>
-                        <div class="webhook-content" {% if not settings.microphone.webhook_url %}style="display: none;"{% endif %}>
+                        <div class="webhook-content" {% if not settings.microphone.enabled %}style="display: none;"{% endif %}>
                             <div class="webhook-input-group mb-3">
                                 <label class="form-label">URL du webhook</label>
                                 <div class="webhook-input-with-test">

@@ -233,6 +233,11 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
         # Démarrer la détection
         detector.start()
         
+        # Vérifier si une source audio est configurée
+        if not audio_source:
+            logging.error("Aucune source audio n'est configurée ou active")
+            return
+            
         # Initialiser la source audio en fonction du paramètre audio_source
         if audio_source.startswith("rtsp"):
             if not rtsp_url:
