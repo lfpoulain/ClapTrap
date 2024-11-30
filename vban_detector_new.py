@@ -8,6 +8,7 @@ import scipy.signal
 import collections
 import threading
 import logging
+import json
 
 class VBANDetector:
     def __init__(self, port=6980):
@@ -54,6 +55,26 @@ class VBANDetector:
         while self.running:
             try:
                 data, addr = self._socket.recvfrom(2048)
+                
+                # Vérifier si la source est activée dans les paramètres
+                try:
+                    with open('settings.json', 'r') as f:
+                        settings = json.load(f)
+                        vban_enabled = False
+                        # Vérifier dans saved_vban_sources
+                        for source in settings.get('saved_vban_sources', []):
+                            if source.get('ip') == addr[0]:
+                                vban_enabled = source.get('enabled', False)
+                                break
+                        # Si pas trouvé dans saved_vban_sources, vérifier dans vban global
+                        if not vban_enabled:
+                            vban_enabled = settings.get('vban', {}).get('enabled', False)
+                        
+                        if not vban_enabled:
+                            continue  # Ignorer les données si la source est désactivée
+                except Exception as e:
+                    logging.error(f"Erreur lors de la lecture des paramètres VBAN: {e}")
+                    continue
                 
                 # Vérifier que le paquet est assez grand pour contenir l'en-tête VBAN (28 bytes)
                 if len(data) < 28:
