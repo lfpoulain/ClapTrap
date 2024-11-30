@@ -207,31 +207,31 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
     try:
         # Initialiser le détecteur audio
         detector = AudioDetector(model, sample_rate=16000, buffer_duration=1.0)
+        detector.initialize()
         
-        def handle_detection(detection_data):
-            try:
+        def create_detection_callback(source_name):
+            def handle_detection(detection_data):
+                try:
+                    logging.info(f"CLAP détecté sur {source_name} avec score {detection_data['score']}")
+                    if socketio:
+                        socketio.emit('clap', {
+                            'source_id': source_name,
+                            'timestamp': detection_data['timestamp'],
+                            'score': detection_data['score']
+                        })
+                    
+                    if webhook_url:
+                        requests.post(webhook_url)
+                except Exception as e:
+                    logging.error(f"Erreur lors de l'envoi de l'événement clap pour {source_name}: {str(e)}")
+            return handle_detection
+        
+        def create_labels_callback(source_name):
+            def handle_labels(labels):
+                logging.debug(f"Labels détectés sur {source_name}: {labels}")
                 if socketio:
-                    socketio.emit('clap', {
-                        'source_id': 'microphone' if not audio_source.startswith('vban://') else f'vban-{audio_source.replace("vban://", "")}',
-                        'timestamp': detection_data['timestamp'],
-                        'score': detection_data['score']
-                    })
-                
-                if webhook_url:
-                    requests.post(webhook_url)
-            except Exception as e:
-                logging.error(f"Erreur lors de l'envoi de l'événement clap: {str(e)}")
-        
-        def handle_labels(labels):
-            if socketio:
-                socketio.emit("labels", {"detected": labels})
-        
-        # Configurer les callbacks
-        detector.set_detection_callback(handle_detection)
-        detector.set_labels_callback(handle_labels)
-        
-        # Démarrer la détection
-        detector.start()
+                    socketio.emit("labels", {"source": source_name, "detected": labels})
+            return handle_labels
         
         # Vérifier si une source audio est configurée
         if not audio_source:
@@ -242,13 +242,37 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
         if audio_source.startswith("rtsp"):
             if not rtsp_url:
                 raise ValueError("RTSP URL must be provided for RTSP audio source.")
+                
+            source_id = f"rtsp_{rtsp_url}"
+            detector.add_source(
+                source_id=source_id,
+                detection_callback=create_detection_callback(source_id),
+                labels_callback=create_labels_callback(source_id)
+            )
+            
+            # Démarrer la détection
+            detector.start()
+            logging.info(f"Détection démarrée pour la source RTSP {source_id}")
+            
             rtsp_reader = read_audio_from_rtsp(rtsp_url, int(16000 * 0.1))  # Buffer de 100ms
             while detection_running:
                 audio_data = next(rtsp_reader)
-                detector.process_audio(audio_data)
+                detector.process_audio(audio_data, source_id)
                 
         elif audio_source.startswith("vban://"):
             vban_ip = audio_source.replace("vban://", "")
+            source_id = f"vban_{vban_ip}"
+            
+            detector.add_source(
+                source_id=source_id,
+                detection_callback=create_detection_callback(source_id),
+                labels_callback=create_labels_callback(source_id)
+            )
+            
+            # Démarrer la détection
+            detector.start()
+            logging.info(f"Détection démarrée pour la source VBAN {source_id}")
+            
             vban_detector = get_vban_detector()
             
             def audio_callback(audio_data, timestamp):
@@ -259,7 +283,7 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
                 if vban_ip not in active_sources:
                     return
                     
-                detector.process_audio(audio_data)
+                detector.process_audio(audio_data, source_id)
             
             vban_detector.set_audio_callback(audio_callback)
             
@@ -277,14 +301,26 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
             # Récupérer l'index du périphérique depuis les paramètres
             settings = reload_settings()
             device_index = int(settings.get('microphone', {}).get('device_index', 0))
+            source_id = f"mic_{device_index}"
+            
+            detector.add_source(
+                source_id=source_id,
+                detection_callback=create_detection_callback(source_id),
+                labels_callback=create_labels_callback(source_id)
+            )
+            
+            # Démarrer la détection
+            detector.start()
+            logging.info(f"Détection démarrée pour la source microphone {source_id}")
             
             with sd.InputStream(
-                device=device_index,  # Utiliser l'index du périphérique spécifié
+                device=device_index,
                 channels=1,
                 samplerate=16000,
                 blocksize=int(16000 * 0.1),  # Buffer de 100ms
-                callback=lambda indata, frames, time, status: detector.process_audio(indata[:, 0])
+                callback=lambda indata, frames, time, status: detector.process_audio(indata[:, 0], source_id)
             ):
+                logging.info("Stream audio démarré pour le microphone")
                 while detection_running:
                     time.sleep(0.1)
                     

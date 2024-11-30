@@ -54,6 +54,12 @@ def main():
     detector = AudioDetector("yamnet.tflite")
     detector.initialize()
     
+    def vban_detection_callback(data):
+        logging.info(f"CLAP détecté sur VBAN! Source: {data['source_id']}, Score: {data['score']}")
+    
+    def vban_labels_callback(labels):
+        logging.debug(f"Labels VBAN: {labels}")
+    
     # Buffer pour accumuler les données audio
     audio_buffer = np.array([], dtype=np.float32)
     CHUNK_SIZE = 1600  # Taille attendue par le classificateur
@@ -69,6 +75,16 @@ def main():
                 header = VBANHeader(data)
                 audio_data = np.frombuffer(data[VBAN_HEADER_SIZE:], dtype=np.float32)
                 
+                # Ajouter la source si elle n'existe pas encore
+                source_id = f"vban_{addr[0]}"
+                if source_id not in detector.sources:
+                    detector.add_source(
+                        source_id=source_id,
+                        detection_callback=vban_detection_callback,
+                        labels_callback=vban_labels_callback
+                    )
+                    logging.info(f"Nouvelle source VBAN détectée: {addr[0]}")
+                
                 # Rééchantillonnage si nécessaire (le détecteur attend du 16kHz)
                 if header.sample_rate != 16000:
                     samples = len(audio_data)
@@ -76,7 +92,7 @@ def main():
                     audio_data = signal.resample(audio_data, new_samples)
                 
                 # Traiter les données audio
-                detector.process_audio(audio_data, addr[0])
+                detector.process_audio(audio_data, source_id)
                 
                 # Jouer l'audio
                 if stream is None:

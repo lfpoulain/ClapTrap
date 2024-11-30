@@ -10,12 +10,23 @@ import { showError } from './modules/utils.js';
 window.showClap = function(sourceId) {
     console.log('📢 showClap called for sourceId:', sourceId);
     
-    const clapEmoji = document.querySelector(`#clap-${sourceId}`);
+    const clapEmojis = document.querySelectorAll('.clap-emoji');
+    let clapEmoji = null;
+    
+    // Créer un nouvel emoji s'il n'existe pas pour cette source
+    if (!document.querySelector(`.clap-emoji[data-source="${sourceId}"]`)) {
+        clapEmoji = document.createElement('span');
+        clapEmoji.className = 'clap-emoji';
+        clapEmoji.textContent = '👏';
+        clapEmoji.dataset.source = sourceId;
+        clapEmoji.style.display = 'none';
+        document.getElementById('detection_display').appendChild(clapEmoji);
+    } else {
+        clapEmoji = document.querySelector(`.clap-emoji[data-source="${sourceId}"]`);
+    }
+    
     const detectionDisplay = document.getElementById('detection_display');
     const waitingEmoji = document.getElementById('waiting-emoji');
-    
-    console.log('Looking for emoji with id:', `clap-${sourceId}`);
-    console.log('Found emoji element:', clapEmoji);
     
     if (clapEmoji && detectionDisplay) {
         console.log('🎯 Showing clap emoji for source:', sourceId);
