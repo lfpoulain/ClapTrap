@@ -6,10 +6,10 @@
         "buffer_duration": "1.0"
     },
     "microphone": {
+        "device_index": "4",
+        "audio_source": "UGREEN 25173",
         "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
-        "enabled": true,
-        "audio_source": "Scarlett Solo USB",
-        "device_index": "3"
+        "enabled": true
     },
     "rtsp_sources": [
         {

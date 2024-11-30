@@ -274,7 +274,12 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
                     time.sleep(1)  # Attendre un peu plus longtemps avant la prochaine vérification
                     
         else:  # Microphone
+            # Récupérer l'index du périphérique depuis les paramètres
+            settings = reload_settings()
+            device_index = int(settings.get('microphone', {}).get('device_index', 0))
+            
             with sd.InputStream(
+                device=device_index,  # Utiliser l'index du périphérique spécifié
                 channels=1,
                 samplerate=16000,
                 blocksize=int(16000 * 0.1),  # Buffer de 100ms
