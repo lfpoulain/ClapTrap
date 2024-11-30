@@ -290,29 +290,24 @@ def verify_settings_saved(new_settings, saved_settings):
 @app.route('/api/detection/start', methods=['POST'])
 def start_detection_route():
     try:
-        settings = request.json
-        if not settings:
+        detection_settings = request.json
+        if not detection_settings:
             return jsonify({'error': 'Aucun paramètre fourni'}), 400
             
         # Vérifier la présence des sections requises et initialiser avec des valeurs par défaut si nécessaire
-        if 'global' not in settings or settings['global'] is None:
-            settings['global'] = {'threshold': '0.2', 'delay': '1.0'}
+        if 'global' not in detection_settings or detection_settings['global'] is None:
+            detection_settings['global'] = {'threshold': '0.2', 'delay': '1.0'}
             
-        if 'microphone' not in settings or settings['microphone'] is None:
-            settings['microphone'] = {
+        if 'microphone' not in detection_settings or detection_settings['microphone'] is None:
+            detection_settings['microphone'] = {
                 'enabled': False,
                 'webhook_url': None,
                 'audio_source': None,
                 'device_index': '0'
             }
             
-        # Sauvegarder les paramètres
-        success, message = save_settings(settings)
-        if not success:
-            return jsonify({'error': message}), 400
-            
         # Vérifier si le microphone est activé
-        microphone_enabled = settings.get('microphone', {})
+        microphone_enabled = detection_settings.get('microphone', {})
         if isinstance(microphone_enabled, dict):
             microphone_enabled = microphone_enabled.get('enabled', False)
         else:
@@ -323,11 +318,11 @@ def start_detection_route():
             
         # Préparer les paramètres pour start_detection avec gestion des valeurs null
         try:
-            global_settings = settings.get('global', {})
+            global_settings = detection_settings.get('global', {})
             if not isinstance(global_settings, dict):
                 global_settings = {}
                 
-            microphone_settings = settings.get('microphone', {})
+            microphone_settings = detection_settings.get('microphone', {})
             if not isinstance(microphone_settings, dict):
                 microphone_settings = {}
                 
@@ -344,7 +339,7 @@ def start_detection_route():
             }
 
             # Check for RTSP sources first
-            rtsp_sources = settings.get('rtsp_sources', [])
+            rtsp_sources = detection_settings.get('rtsp_sources', [])
             for source in rtsp_sources:
                 if source.get('enabled', False):
                     detection_params['audio_source'] = f"rtsp://{source['url']}"
@@ -355,7 +350,7 @@ def start_detection_route():
             # If no RTSP source is enabled, check for VBAN sources
             if not detection_params['audio_source'] and not microphone_enabled:
                 # Vérifier d'abord saved_vban_sources
-                saved_vban_sources = settings.get('saved_vban_sources', [])
+                saved_vban_sources = detection_settings.get('saved_vban_sources', [])
                 if saved_vban_sources:
                     # Utiliser la première source VBAN active
                     for source in saved_vban_sources:
