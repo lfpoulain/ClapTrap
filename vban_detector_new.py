@@ -153,6 +153,15 @@ class VBANDetector:
                 }
                 sample_rate = sample_rates.get(sr_index, 44100)
                 
+                # Mettre à jour le dictionnaire des sources
+                with self._lock:
+                    self.sources[ip] = {
+                        'last_seen': time.time(),
+                        'name': name,
+                        'sample_rate': sample_rate,
+                        'channels': channels
+                    }
+                
                 # Créer un objet source
                 source = type('VBANSource', (), {
                     'name': name,
@@ -164,8 +173,15 @@ class VBANDetector:
                 
                 # Log si demandé
                 if logged_sources is not None and ip not in logged_sources:
-                    logging.info(f"Paquet VBAN parsé: {name}, {channels} canaux @ {sample_rate}Hz")
+                    logging.info(f"Source VBAN détectée: {name} ({ip}), {channels} canaux @ {sample_rate}Hz")
                     logged_sources.add(ip)
+                
+                # Notifier le callback des sources si défini
+                if self.source_callback:
+                    try:
+                        self.source_callback(ip, name)
+                    except Exception as e:
+                        logging.error(f"Erreur dans le callback des sources: {e}")
                 
                 return source
                 

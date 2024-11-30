@@ -258,6 +258,16 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
             
             vban_detector.set_audio_callback(audio_callback)
             
+            # Maintenir le thread en vie tant que la détection est active
+            while detection_running:
+                time.sleep(0.1)  # Éviter de surcharger le CPU
+                
+                # Vérifier périodiquement si la source est toujours active
+                active_sources = vban_detector.get_active_sources()
+                if vban_ip not in active_sources:
+                    logging.warning(f"Source VBAN {vban_ip} non trouvée")
+                    time.sleep(1)  # Attendre un peu plus longtemps avant la prochaine vérification
+                    
         else:  # Microphone
             with sd.InputStream(
                 channels=1,

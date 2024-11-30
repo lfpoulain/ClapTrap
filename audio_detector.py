@@ -19,6 +19,8 @@ class AudioDetector:
         self.last_detection_time = 0
         self.detection_callback = None
         self.labels_callback = None
+        self.last_timestamp_ms = 0  # Pour suivre le dernier timestamp utilisé
+        self.start_time_ms = None   # Temps de démarrage pour calculer les timestamps relatifs
         
     def initialize(self, max_results=5, score_threshold=0.5):
         """Initialise le classificateur audio"""
@@ -113,32 +115,53 @@ class AudioDetector:
                 resampled_data = audio_data[::3]  # Prend 1 échantillon sur 3 pour passer de 48kHz à 16kHz
                 audio_data = resampled_data
             
+            # S'assurer que les données sont en float32
+            if audio_data.dtype != np.float32:
+                audio_data = audio_data.astype(np.float32)
+            
+            # Ajouter les nouvelles données au buffer
+            self.buffer.extend(audio_data)
+            
             # Log pour debug
             logging.debug(f"Audio data - Shape: {audio_data.shape}, dtype: {audio_data.dtype}, min: {np.min(audio_data)}, max: {np.max(audio_data)}")
             
             # Traiter avec le classificateur
-            if self.running:
-                # S'assurer que les données sont en float32
-                if audio_data.dtype != np.float32:
-                    audio_data = audio_data.astype(np.float32)
-                
+            if self.running and self.classifier and self.start_time_ms is not None:
                 # Traiter les données par blocs de 1600 échantillons
                 block_size = 1600
-                for i in range(0, len(audio_data), block_size):
-                    block = audio_data[i:i+block_size]
-                    if len(block) == block_size:  # Ne traiter que les blocs complets
-                        # Créer le conteneur audio
-                        audio_data_container = containers.AudioData.create_from_array(
-                            block,
-                            self.sample_rate
-                        )
-                        # Classifier le bloc
-                        if self.classifier:
-                            timestamp_ms = int(time.time() * 1000)
-                            self.classifier.classify_async(audio_data_container, timestamp_ms)
+                buffer_array = np.array(list(self.buffer))
                 
+                # Tant qu'il y a assez de données dans le buffer
+                while len(buffer_array) >= block_size:
+                    # Extraire un bloc
+                    block = buffer_array[:block_size]
+                    buffer_array = buffer_array[block_size:]
+                    
+                    # Créer le conteneur audio
+                    audio_data_container = containers.AudioData.create_from_array(
+                        block,
+                        self.sample_rate
+                    )
+                    
+                    # Calculer le prochain timestamp relatif au démarrage
+                    # S'assurer qu'il est toujours plus grand que le précédent
+                    block_duration_ms = int((block_size / self.sample_rate) * 1000)
+                    next_timestamp = max(
+                        self.last_timestamp_ms + block_duration_ms,
+                        int(time.time() * 1000)
+                    )
+                    self.last_timestamp_ms = next_timestamp
+                    
+                    # Classifier le bloc avec le nouveau timestamp
+                    self.classifier.classify_async(audio_data_container, next_timestamp)
+                
+                # Mettre à jour le buffer avec les données restantes
+                self.buffer.clear()
+                if len(buffer_array) > 0:
+                    self.buffer.extend(buffer_array)
+            
         except Exception as e:
-            logging.error(f"Erreur dans le traitement audio: {str(e)}")
+            logging.error(f"Erreur dans le traitement audio: {e}")
             import traceback
             logging.error(traceback.format_exc())
             
@@ -154,18 +177,41 @@ class AudioDetector:
         """Démarre la détection"""
         if not self.classifier:
             self.initialize()
-        self.running = True
         
+        # Réinitialiser les timestamps
+        self.start_time_ms = int(time.time() * 1000)
+        self.last_timestamp_ms = self.start_time_ms
+        
+        # Démarrer le task runner de MediaPipe
+        if self.classifier:
+            try:
+                # Créer un conteneur audio vide pour démarrer le stream
+                empty_data = np.zeros(1600, dtype=np.float32)
+                audio_data = containers.AudioData.create_from_array(
+                    empty_data,
+                    self.sample_rate
+                )
+                # Démarrer le stream avec le timestamp initial
+                self.classifier.classify_async(audio_data, self.start_time_ms)
+                logging.info("Task runner MediaPipe démarré avec succès")
+            except Exception as e:
+                logging.error(f"Erreur lors du démarrage du task runner: {e}")
+                return False
+        
+        self.running = True
+        return True
+
     def stop(self):
         """Arrête le classificateur"""
-        if self.running:
+        self.running = False
+        if self.classifier:
             try:
-                if self.classifier:
-                    self.classifier.close()
-                self.running = False
+                self.classifier.close()
+                self.classifier = None
+                logging.info("Classificateur audio arrêté")
             except Exception as e:
-                logging.error(f"Erreur lors de l'arrêt du classificateur: {str(e)}")
-
+                logging.error(f"Erreur lors de l'arrêt du classificateur: {e}")
+                
     def __del__(self):
         """Destructeur pour s'assurer que les classificateurs sont bien arrêtés"""
         self.stop()
