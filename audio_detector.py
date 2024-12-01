@@ -25,7 +25,7 @@ class AudioDetector:
         self.start_time_ms = None
         self.current_source_id = None  # Pour suivre la source actuelle dans le callback
 
-    def initialize(self, max_results=5, score_threshold=0.5):
+    def initialize(self, max_results=5, score_threshold=0.3):
         """Initialise le classificateur audio"""
         try:
             base_options = python.BaseOptions(model_asset_path=self.model_path)
@@ -132,7 +132,7 @@ class AudioDetector:
             
             # Vérifier si on a détecté un clap
             current_time = time.time()
-            if score_sum > 0.5 and (current_time - self.last_detection_time.get(source_id, 0)) > 1.0:
+            if score_sum > 0.3 and (current_time - self.last_detection_time.get(source_id, 0)) > 1.0:
                 if self.sources[source_id]['detection_callback']:
                     try:
                         self.sources[source_id]['detection_callback']({
