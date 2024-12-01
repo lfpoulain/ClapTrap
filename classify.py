@@ -91,8 +91,19 @@ except Exception as e:
     raise
 
 # Charger les flux RTSP et leurs webhooks associés
-with open("flux.json") as f:
-    fluxes = json.load(f)
+try:
+    with open("settings.json") as f:
+        settings_data = json.load(f)
+        fluxes = settings_data.get('rtsp_streams', {})
+except FileNotFoundError:
+    logging.warning("Le fichier settings.json n'existe pas, aucun flux RTSP ne sera chargé")
+    fluxes = {}
+except json.JSONDecodeError:
+    logging.error("Le fichier settings.json est mal formaté")
+    fluxes = {}
+except Exception as e:
+    logging.error(f"Erreur lors du chargement des flux RTSP: {str(e)}")
+    fluxes = {}
 
 def save_audio_to_wav(audio_data, sample_rate, filename):
     if not audio_data.size:

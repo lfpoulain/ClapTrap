@@ -37,36 +37,49 @@ python app.py
 ## Configuration
 
 ### Paramètres principaux
-Les paramètres sont maintenant automatiquement sauvegardés lors du démarrage de la détection. Le système inclut :
+Les paramètres sont maintenant automatiquement sauvegardés et validés. Le système inclut :
 
 - Validation des paramètres avant le démarrage :
   - `threshold` : Seuil de détection (entre 0 et 1)
   - `delay` : Délai minimum positif entre deux détections (en secondes)
   - `webhook_url` : URL valide commençant par http:// ou https://
-  - `audio_source` : Source audio sélectionnée
+  - `enabled` : État d'activation pour chaque source
 
 - Gestion robuste des erreurs :
   - Vérification des permissions d'écriture
   - Sauvegarde sécurisée avec fichier temporaire
   - Restauration automatique en cas d'erreur
   - Messages d'erreur explicites
+  - Gestion des timeouts pour les webhooks
 
 ### Mode Développement
-En mode développement (DEBUG=True) :
+En mode développement :
 - Lien "Exécuter les tests" dans le footer
 - Tests automatisés couvrant :
   - Validation des paramètres
   - Opérations sur les fichiers
   - Préservation des paramètres lors de l'arrêt
+  - Test des webhooks
 
 ### Sources audio
 1. **Microphone local**
    - Sélection du périphérique dans l'interface
-   - Configuration automatique
+   - Configuration du webhook dédié
+   - Activation/désactivation indépendante
 
 2. **Flux RTSP**
-   - Configuration dans `flux.json`
-   - Support de plusieurs flux avec webhooks dédiés
+   - Configuration dans l'interface
+   - Support de plusieurs flux
+   - Webhooks configurables par flux
+   - Activation/désactivation individuelle
+
+3. **Sources VBAN**
+   - Support du protocole audio VBAN (Virtual Audio Network)
+   - Configuration dynamique des sources VBAN
+   - Gestion des flux audio en temps réel
+   - Webhooks dédiés par source VBAN
+   - Activation/désactivation individuelle des sources
+   - Support de plusieurs sources simultanées
 
 ## Utilisation
 
@@ -91,40 +104,78 @@ En mode développement (DEBUG=True) :
 ## Architecture technique
 
 ### Fichiers principaux
-- `app.py` : Application Flask principale gérant l'interface web et les interactions
-- `classify.py` : Module de détection d'applaudissements utilisant MediaPipe
+- `app.py` : Application Flask principale avec gestion des WebSockets
+- `audio_detector.py` : Module de détection audio avec MediaPipe
 - `templates/index.html` : Interface utilisateur responsive
 - `static/css/style.css` : Styles de l'interface
-- `static/js/script.js` : Interactions côté client
-- `mediamtx/` : Serveur RTSP pour la gestion des flux audio
+- `static/js/modules/` : Modules JavaScript pour la gestion des détections et configurations
+- `static/js/modules/detection.js` : Gestion des détections audio
+- `vban_manager.py` : Gestion des sources audio VBAN
 
 ### Composants clés
 1. **Backend Flask**
-   - Gestion des WebSockets pour les mises à jour en temps réel
-   - API REST pour le contrôle de la détection
-   - Configuration des paramètres
+   - Gestion des WebSockets avec Socket.IO
+   - API REST pour la configuration
+   - Gestion des sources audio multiples
+   - Système de notifications en temps réel
 
 2. **Détection audio**
-   - Modèle YAMNet pré-entraîné
-   - Support multi-sources (microphone/RTSP)
-   - Filtrage intelligent des faux positifs
+   - Modèle MediaPipe pour la classification audio
+   - Support multi-sources (microphone/RTSP/VBAN)
+   - Système de scoring personnalisé
+   - Gestion des délais entre détections
 
 3. **Interface utilisateur**
-   - Design moderne et responsive
-   - Visualisation en temps réel
-   - Configuration intuitive
+   - Design moderne avec thème sombre
+   - Configuration par cartes
+   - Visualisation en temps réel des détections
+   - Test des webhooks intégré
+   - Indicateurs d'état pour chaque source
 
 ## Intégration webhook
 
-Le système envoie une requête POST à l'URL configurée lors de chaque détection. Compatible avec :
-- Home Assistant
-- Node-RED
-- Services web personnalisés
+Le système envoie une requête POST à l'URL configurée avec gestion des erreurs :
+- Retry automatique en cas d'échec
+- Timeout configurable
+- Test de connexion intégré
+- Support SSL/TLS
 
-Exemple d'URL webhook Home Assistant :
+Format de payload :
+```json
+{
+  "source": "microphone",
+  "timestamp": 1234567890,
+  "score": 0.95
+}
 ```
-http://homeassistant.local:8123/api/webhook/claptrap
-```
+
+## Intégration VBAN
+
+Le système supporte le protocole VBAN (Virtual Audio Network) pour la réception de flux audio en réseau :
+
+### Configuration VBAN
+- Ajout dynamique de sources VBAN
+- Configuration par source :
+  - Nom de la source
+  - Adresse IP
+  - Port d'écoute
+  - Nom du flux
+  - URL du webhook
+- État d'activation individuel
+
+### Fonctionnalités VBAN
+- Détection automatique des flux
+- Gestion de la mémoire optimisée
+- Support multi-sources
+- Nettoyage automatique des ressources
+- Gestion des erreurs réseau
+- Reconnexion automatique
+
+### Sécurité VBAN
+- Validation des paramètres réseau
+- Vérification des ports
+- Gestion des timeouts
+- Protection contre les surcharges
 
 ## Serveur RTSP (MediaMTX)
 
@@ -142,14 +193,22 @@ Configuration dans `mediamtx/mediamtx.yml`
 - Contrôle des valeurs hors limites
 - Validation des URLs de webhook
 - Test d'accessibilité des webhooks
+- Vérification des permissions d'accès audio
 
 ### Gestion des fichiers
 - Sauvegarde atomique avec fichiers temporaires
 - Gestion des permissions
 - Backup automatique des paramètres
 - Restauration en cas d'erreur
+- Verrouillage des fichiers pendant l'écriture
 
-### Tests intégrés
+### Gestion des ressources
+- Nettoyage automatique des détecteurs
+- Libération des ressources audio
+- Gestion des timeouts
+- Surveillance des performances
+
+## Tests intégrés
 Les tests automatisés vérifient :
 1. La validation des paramètres
    - Paramètres requis
