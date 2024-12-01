@@ -57,20 +57,20 @@ class VBANAudioProcessor:
         # Configuration de la détection
         self.score_threshold = score_threshold
         self.delay = delay
-        self.peak_threshold = 0.5  # Seuil pour la détection des pics
-        self.peak_prominence = 0.3  # Proéminence minimale des pics
+        self.peak_threshold = 0.15  # Très bas pour être plus sensible
+        self.peak_prominence = 0.1  # Très bas pour détecter plus de pics
         
         # Paramètres pour la détection basée sur les caractéristiques
         self.feature_weights = {
             'temporal': {
-                'rms': 0.2,
-                'zcr': 0.15,
-                'crest_factor': 0.2
+                'rms': 0.4,           # Beaucoup plus d'importance à l'amplitude
+                'zcr': 0.3,           # Plus d'importance aux transitions
+                'crest_factor': 0.3   # Plus d'importance aux pics
             },
             'spectral': {
-                'spectral_centroid': 0.15,
-                'spectral_contrast': 0.15,
-                'spectral_flatness': 0.15
+                'spectral_centroid': 0.0,    # Désactivé
+                'spectral_contrast': 0.0,    # Désactivé
+                'spectral_flatness': 0.0     # Désactivé
             }
         }
         
@@ -254,6 +254,7 @@ class VBANAudioProcessor:
     def preprocess_audio(self, audio_data):
         """
         Prépare les données audio pour le classificateur.
+        Garde le signal brut, fait uniquement la conversion de format nécessaire.
         
         Args:
             audio_data (numpy.ndarray): Données audio brutes
@@ -261,23 +262,9 @@ class VBANAudioProcessor:
         Returns:
             containers.AudioData: Données audio formatées pour le classificateur
         """
-        # Appliquer le filtrage du signal
-        filtered_data = self.signal_processor.apply_bandpass_filter(
-            audio_data,
-            low_cutoff_freq=100,  # Filtrer les basses fréquences < 100 Hz
-            high_cutoff_freq=4000  # Filtrer les hautes fréquences > 4000 Hz
-        )
-        
-        # Supprimer le bruit électrique 50/60 Hz
-        filtered_data = self.signal_processor.apply_notch_filter(filtered_data, center_freq=50)
-        filtered_data = self.signal_processor.apply_notch_filter(filtered_data, center_freq=60)
-        
-        # Normaliser le signal
-        filtered_data = self.signal_processor.normalize_signal(filtered_data)
-        
-        # Convertir en format audio pour le classificateur
+        # Convertir en format audio pour le classificateur sans aucun filtrage
         return containers.AudioData.create_from_array(
-            filtered_data,
+            audio_data,
             self.audio_format
         )
             

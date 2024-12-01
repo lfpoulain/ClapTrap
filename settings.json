@@ -6,10 +6,10 @@
         "buffer_duration": "1.0"
     },
     "microphone": {
-        "enabled": false,
-        "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
+        "device_index": "9",
         "audio_source": "Microphone iMac",
-        "device_index": "9"
+        "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
+        "enabled": false
     },
     "rtsp_sources": [
         {
@@ -17,7 +17,7 @@
             "name": "qsdqsdqsd",
             "url": "rtsp://localhost:8554/mic",
             "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
-            "enabled": false
+            "enabled": true
         }
     ],
     "saved_vban_sources": [

@@ -104,7 +104,7 @@ class VBANDetector:
                             audio_data = audio_data.reshape(-1, source.channels)
                             audio_data = np.mean(audio_data, axis=1)
                         
-                        # Rééchantillonner si nécessaire
+                        # Rééchantillonner uniquement si absolument nécessaire pour YAMNet
                         if source.sample_rate != self.target_sample_rate:
                             # Calculer le nombre d'échantillons après rééchantillonnage
                             target_length = int(len(audio_data) * self.target_sample_rate / source.sample_rate)
