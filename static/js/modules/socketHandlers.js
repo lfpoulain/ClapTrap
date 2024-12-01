@@ -27,9 +27,23 @@ export function initializeSocketIO() {
     socket.on('labels', (data) => {
         console.log('🏷️ Labels received:', data);
         const container = document.getElementById('detected_labels');
+        const waitingEmoji = document.getElementById('waiting-emoji');
+        
         if (!container) {
             console.error('❌ Labels container not found');
             return;
+        }
+
+        // Vérifier si on a détecté une éructation
+        if (data.detected && Array.isArray(data.detected)) {
+            const burpingDetected = data.detected.some(label => label.label === 'Burping, eructation');
+            if (burpingDetected && waitingEmoji) {
+                console.log('🤢 Burping detected, changing emoji...');
+                waitingEmoji.textContent = '😱';
+                setTimeout(() => {
+                    waitingEmoji.textContent = '👂';
+                }, 2000);
+            }
         }
 
         // Vider le conteneur
