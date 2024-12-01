@@ -6,7 +6,7 @@
         "buffer_duration": "1.0"
     },
     "microphone": {
-        "enabled": true,
+        "enabled": false,
         "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
         "audio_source": "Microphone iMac",
         "device_index": "9"
@@ -23,10 +23,10 @@
     "saved_vban_sources": [
         {
             "name": "Talkie",
-            "ip": "192.168.68.55",
+            "ip": "192.168.68.66",
             "port": 6980,
             "stream_name": "Talkie",
-            "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvV",
+            "webhook_url": "http://homeassistant.local:8123/api/webhook/--25hJhvaYrsL9IxLKXyyEjvB",
             "enabled": true,
             "testButton": "<button class=\"btn btn-sm btn-outline-primary test-webhook\" data-source=\"vban-Talkie\" type=\"button\">Tester</button>"
         }

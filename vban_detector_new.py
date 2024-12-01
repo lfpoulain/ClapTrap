@@ -26,6 +26,10 @@ class VBANDetector:
         self.last_timestamp = 0
         self.stream = None
         self._lock = threading.Lock()  # Verrou pour la thread-safety
+        self._settings_lock = threading.Lock()  # Verrou pour les paramètres
+        self._settings_cache = None
+        self._last_settings_load = 0
+        self._settings_cache_duration = 5  # Durée du cache en secondes
         
     def start_listening(self):
         """Démarre l'écoute des flux VBAN"""
@@ -56,26 +60,6 @@ class VBANDetector:
             try:
                 data, addr = self._socket.recvfrom(2048)
                 
-                # Vérifier si la source est activée dans les paramètres
-                try:
-                    with open('settings.json', 'r') as f:
-                        settings = json.load(f)
-                        vban_enabled = False
-                        # Vérifier dans saved_vban_sources
-                        for source in settings.get('saved_vban_sources', []):
-                            if source.get('ip') == addr[0]:
-                                vban_enabled = source.get('enabled', False)
-                                break
-                        # Si pas trouvé dans saved_vban_sources, vérifier dans vban global
-                        if not vban_enabled:
-                            vban_enabled = settings.get('vban', {}).get('enabled', False)
-                        
-                        if not vban_enabled:
-                            continue  # Ignorer les données si la source est désactivée
-                except Exception as e:
-                    logging.error(f"Erreur lors de la lecture des paramètres VBAN: {e}")
-                    continue
-                
                 # Vérifier que le paquet est assez grand pour contenir l'en-tête VBAN (28 bytes)
                 if len(data) < 28:
                     logging.warning(f"Paquet trop petit ({len(data)} bytes), ignoré")
@@ -83,6 +67,20 @@ class VBANDetector:
                     
                 source = self._parse_vban_packet(data, addr, logged_sources)
                 if source:
+                    # Vérifier si la source est activée dans settings.json
+                    settings = self._load_settings()
+                    if settings and 'saved_vban_sources' in settings:
+                        source_enabled = False
+                        for saved_source in settings['saved_vban_sources']:
+                            if (saved_source['ip'] == source.ip and 
+                                saved_source['stream_name'] == source.name and 
+                                saved_source.get('enabled', False)):
+                                source_enabled = True
+                                break
+                        
+                        if not source_enabled:
+                            continue  # Ignorer les sources désactivées
+                            
                     try:
                         # Calculer le nombre d'échantillons complets disponibles
                         audio_bytes = data[28:]
@@ -302,3 +300,28 @@ class VBANDetector:
                     })
                     
         return active_sources
+
+    def _load_settings(self):
+        """Charge les paramètres de manière thread-safe avec mise en cache"""
+        current_time = time.time()
+        
+        with self._settings_lock:
+            # Utiliser le cache s'il est valide
+            if (self._settings_cache is not None and 
+                current_time - self._last_settings_load < self._settings_cache_duration):
+                return self._settings_cache
+            
+            try:
+                with open('settings.json', 'r') as f:
+                    self._settings_cache = json.load(f)
+                    self._last_settings_load = current_time
+                    return self._settings_cache
+            except FileNotFoundError:
+                self._settings_cache = {}
+                self._last_settings_load = current_time
+                return {}
+            except json.JSONDecodeError:
+                logging.error("Erreur lors de la lecture du fichier settings.json")
+                self._settings_cache = {}
+                self._last_settings_load = current_time
+                return {}
