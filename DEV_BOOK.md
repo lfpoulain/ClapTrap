@@ -11,7 +11,7 @@ Listing des sources audio VBAN [OK]
 Listing des sources RTSP via un fichier de configuration settings.json [OK]
 Détection des claps à partir du son capté par le micro [OK]
 Détection des claps à partir du son capté par la source RTSP [OK]
-Détection des claps à partir du son capté par la source VBAN
+Détection des claps à partir du son capté par la source VBAN [OK]
 Intégration dans l'interface d'un moyen d'associer un webhook pour chaque source (micro, RTSP, VBAN) [OK]
 Enregistrement automatique des paramètres quand on clique sur "Démarrer la détection" sans avoir à cliquer sur le bouton
 "enregistrer les paramètres" [OK]
@@ -61,11 +61,11 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
        + réalisation d'un proto utilisant pyVBAN pour lister les sources vban émettrices. [OK]
        + Ajouter une section VBAN qui liste les sources VBAN disponibles en train d'émettre. [OK]
        + Permettre l'ajout/suppression dynamique des sources VBAN qu'on veut garder
-         * Modification du modèle de données [TODO]
+         * Modification du modèle de données [OK]
            - Ajouter une section "saved_vban_sources" dans settings.json [OK]
            - Stocker pour chaque source : nom, ip, port, webhook_url, stream_name, enabled [OK]
          
-         * Interface utilisateur [TODO]
+         * Interface utilisateur [OK]
            - Afficher deux listes distinctes : [OK]
              > Sources VBAN détectées (actuellement émettant)
              > Sources VBAN sauvegardées (configuration permanente)
@@ -74,14 +74,14 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
            - Ajouter un champ webhook_url pour chaque source sauvegardée [OK]
            - Ajouter un switch enabled/disabled pour chaque source sauvegardée [OK]
          
-         * Backend [TODO]
+         * Backend [OK]
            - Créer une route POST /api/vban/save pour sauvegarder une nouvelle source [OK]
            - Créer une route DELETE /api/vban/remove pour supprimer une source [OK]
            - Créer une route PUT /api/vban/update pour mettre à jour les paramètres [OK]
            - Implémenter la persistance dans settings.json [OK]
-           - Gérer la validation des données
+           - Gérer la validation des données [OK]
          
-         * Tests et validation [TODO]
+         * Tests et validation [OK]
            - Tester l'ajout d'une nouvelle source [OK]
            - Tester la suppression d'une source [OK]
            - Tester la mise à jour des paramètres [OK]
@@ -100,7 +100,7 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
    - Implémenter la sauvegarde des webhooks dans settings.json [OK]
    - Développer la logique d'appel des webhooks lors de la détection [OK]
    - Ajouter une route API pour tester les webhooks [OK]
-   - Gérer les timeouts et les erreurs d'appel webhook 
+   - Gérer les timeouts et les erreurs d'appel webhook [OK]
 
 4. Tests et validation
    - Tester la sauvegarde et le chargement des webhooks [OK]
@@ -111,7 +111,7 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
 
 ## Plan d'action pour la détection des claps VBAN
 
-1. Préparation de l'infrastructure audio [TODO]
+1. Préparation de l'infrastructure audio [OK]
    - Créer une classe `VBANAudioProcessor` pour gérer le traitement audio des flux VBAN
      * Structure de la classe [OK]
        + Initialisation avec paramètres (ip, port, stream_name, webhook_url) [OK]
@@ -150,18 +150,18 @@ Enregistrement automatique des paramètres quand on clique sur "Démarrer la dé
      * Analyse des caractéristiques temporelles et fréquentielles [OK]
    - Ajouter des seuils de détection configurables [OK]
 
-3. Intégration dans l'architecture existante [TODO]
+3. Intégration dans l'architecture existante [OK]
    - Créer un gestionnaire de détection pour chaque source VBAN active [OK]
    - Intégrer la détection dans la boucle principale de traitement [OK]
-   - Implémenter la gestion des événements de détection
+   - Implémenter la gestion des événements de détection [OK]
 
 4. Interface utilisateur [TODO]
-   - Ajouter des indicateurs visuels de détection pour chaque source VBAN
-   - Implémenter un retour visuel lors de la détection d'un clap
-   - Ajouter des contrôles pour ajuster les paramètres de détection
+   - Ajouter des indicateurs visuels de détection pour chaque source VBAN [TODO]
+   - Implémenter un retour visuel lors de la détection d'un clap [TODO]
+   - Ajouter des contrôles pour ajuster les paramètres de détection [TODO]
 
 5. Tests et validation [TODO]
-   - Tester la détection avec différentes sources VBAN
-   - Valider la précision de la détection
-   - Optimiser les performances et la latence
-   - Tester la robustesse face aux faux positifs
+   - Tester la détection avec différentes sources VBAN [TODO]
+   - Valider la précision de la détection [TODO]
+   - Optimiser les performances et la latence [TODO]
+   - Tester la robustesse face aux faux positifs [TODO]
