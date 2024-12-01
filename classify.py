@@ -209,7 +209,7 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
         detector = AudioDetector(model, sample_rate=16000, buffer_duration=1.0)
         detector.initialize()
         
-        def create_detection_callback(source_name):
+        def create_detection_callback(source_name, webhook_url=None):
             def handle_detection(detection_data):
                 try:
                     logging.info(f"CLAP détecté sur {source_name} avec score {detection_data['score']}")
@@ -220,7 +220,9 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
                             'score': detection_data['score']
                         })
                     
+                    # Utiliser le webhook_url passé au callback
                     if webhook_url:
+                        logging.info(f"Envoi webhook pour {source_name} vers {webhook_url}")
                         requests.post(webhook_url)
                 except Exception as e:
                     logging.error(f"Erreur lors de l'envoi de l'événement clap pour {source_name}: {str(e)}")
@@ -244,9 +246,22 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
                 raise ValueError("RTSP URL must be provided for RTSP audio source.")
                 
             source_id = f"rtsp_{rtsp_url}"
+            
+            # Récupérer le webhook_url depuis les paramètres RTSP
+            settings = reload_settings()
+            rtsp_webhook_url = None
+            if settings and 'rtsp_sources' in settings:
+                for source in settings['rtsp_sources']:
+                    if source.get('url') == rtsp_url and source.get('enabled', True):
+                        rtsp_webhook_url = source.get('webhook_url')
+                        break
+            
+            # Utiliser le webhook spécifique à la source RTSP s'il existe, sinon utiliser celui par défaut
+            webhook_url_to_use = rtsp_webhook_url or webhook_url
+            
             detector.add_source(
                 source_id=source_id,
-                detection_callback=create_detection_callback(source_id),
+                detection_callback=create_detection_callback(source_id, webhook_url_to_use),
                 labels_callback=create_labels_callback(source_id)
             )
             
@@ -263,15 +278,27 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
             vban_ip = audio_source.replace("vban://", "")
             source_id = f"vban_{vban_ip}"
             
+            # Récupérer le webhook_url depuis les paramètres VBAN
+            settings = reload_settings()
+            vban_webhook_url = None
+            if settings and 'saved_vban_sources' in settings:
+                for source in settings['saved_vban_sources']:
+                    if source.get('ip') == vban_ip and source.get('enabled', True):
+                        vban_webhook_url = source.get('webhook_url')
+                        break
+            
+            # Utiliser le webhook spécifique à la source VBAN s'il existe, sinon utiliser celui par défaut
+            webhook_url_to_use = vban_webhook_url or webhook_url
+            
             detector.add_source(
                 source_id=source_id,
-                detection_callback=create_detection_callback(source_id),
+                detection_callback=create_detection_callback(source_id, webhook_url_to_use),
                 labels_callback=create_labels_callback(source_id)
             )
             
             # Démarrer la détection
             detector.start()
-            logging.info(f"Détection démarrée pour la source VBAN {source_id}")
+            logging.info(f"Détection démarrée pour la source VBAN {source_id} avec webhook {webhook_url_to_use}")
             
             vban_detector = get_vban_detector()
             
@@ -303,9 +330,13 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
             device_index = int(settings.get('microphone', {}).get('device_index', 0))
             source_id = f"mic_{device_index}"
             
+            # Récupérer le webhook_url depuis les paramètres du microphone
+            microphone_webhook_url = settings.get('microphone', {}).get('webhook_url')
+            webhook_url_to_use = microphone_webhook_url or webhook_url
+            
             detector.add_source(
                 source_id=source_id,
-                detection_callback=create_detection_callback(source_id),
+                detection_callback=create_detection_callback(source_id, webhook_url_to_use),
                 labels_callback=create_labels_callback(source_id)
             )
             

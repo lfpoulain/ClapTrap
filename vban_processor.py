@@ -5,9 +5,29 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import audio
 from mediapipe.tasks.python.components import containers
 from vban_manager import get_vban_detector
-import requests
 from circular_buffer import CircularAudioBuffer
 from vban_signal_processor import VBANSignalProcessor
+
+class WebhookManager:
+    def __init__(self):
+        self.session = requests.Session()
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[500, 502, 503, 504]
+        )
+        self.session.mount('http://', HTTPAdapter(max_retries=retry_strategy))
+        self.session.mount('https://', HTTPAdapter(max_retries=retry_strategy))
+    
+    def send_webhook(self, url, data):
+        """Envoie une requête webhook et retourne la réponse"""
+        try:
+            response = self.session.post(url, json=data, timeout=5)
+            response.raise_for_status()
+            return response
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Webhook failed: {str(e)}")
+            raise
 
 class VBANAudioProcessor:
     """
@@ -74,6 +94,9 @@ class VBANAudioProcessor:
         
         # Initialisation du classificateur
         self.initialize_classifier()
+        
+        # Gestionnaire de webhooks
+        self.webhook_manager = WebhookManager()
         
     def initialize_classifier(self):
         """Configure et initialise le classificateur audio YAMNet."""
@@ -315,16 +338,18 @@ class VBANAudioProcessor:
             # Notification webhook
             if self.webhook_url:
                 try:
-                    response = requests.post(self.webhook_url, json={
+                    logging.info(f"Envoi webhook vers {self.webhook_url} pour le stream {self.stream_name}")
+                    data = {
                         'event': 'clap_detected',
                         'source': 'vban',
                         'stream_name': self.stream_name,
                         'score': score,
                         'timestamp': timestamp
-                    }, timeout=1.0)
-                    response.raise_for_status()
+                    }
+                    response = self.webhook_manager.send_webhook(self.webhook_url, data)
+                    logging.info(f"Webhook envoyé avec succès, status: {response.status_code}")
                 except requests.exceptions.RequestException as e:
-                    logging.error(f"Erreur lors de l'appel webhook: {str(e)}")
+                    logging.error(f"Erreur lors de l'appel webhook pour {self.stream_name}: {str(e)}, URL: {self.webhook_url}")
                     
         except Exception as e:
             logging.error(f"Erreur lors de la notification: {str(e)}")
