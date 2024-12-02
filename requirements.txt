@@ -6,3 +6,7 @@ mediapipe==0.10.8
 requests==2.31.0
 pyvban
 scipy==1.11.4
+flask
+flask_socketio
+ffmpeg
+psutil
